@@ -44,6 +44,7 @@
 #include "Annotation.h"
 #include "FormFields.h"
 #include "PdfTools.h"
+#include "MergePdf.h"
 #include "ChmModel.h"
 #include "MarkdownModel.h"
 #include "MarkdownToc.h"
@@ -805,6 +806,12 @@ Str HwndPasswordUI::GetPassword(Str path, u8* fileDigest, u8 decryptionKeyOut[32
     bool canRememberPwd = SettingsRememberOpenedFiles() && gSettings->rememberStatePerDocument;
     bool* rememberPwd = canRememberPwd ? saveKey : nullptr;
     return ShowGetPasswordDialog(hwnd, path, rememberPwd, &gShowPassword);
+}
+
+// a PDF a dialog reads pages from (Merge PDF); asks for its password like opening it in a tab
+EngineBase* CreatePdfEngineForDialog(Str path, HWND hwnd) {
+    HwndPasswordUI pwdUI(hwnd);
+    return CreateEngineMupdfFromFile(path, FileType::PDF, DpiGet(), &pwdUI);
 }
 
 // True while a tab is mid-load (async open). Used so we don't treat a plain
@@ -12427,6 +12434,10 @@ static LRESULT FrameOnCommand(MainWindow* win, HWND hwnd, UINT msg, WPARAM wp, L
 
         case CmdPdfDeletePages:
             ShowPdfDeletePageDialog(win);
+            break;
+
+        case CmdMergePDF:
+            ShowMergePdfDialog(win);
             break;
 
         case CmdPdfExtractPages:

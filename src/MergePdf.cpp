@@ -40,10 +40,11 @@
 // removed (not dropped, so they can be restored); the result is saved over the
 // document or as a new PDF.
 //
+//                                                ■ a.pdf  ■ b.pdf
 //   +----------------------------------------------------------+
 //   |  [1]   [2]   [x3]   [1]   [2] ...     thumbnails (MergeGrid)
 //   +----------------------------------------------------------+
-//   [Add PDF...] [Remove] [Restore] 7 pages, 1 removed  ■ a.pdf  ■ b.pdf  [Save] [Save As...] [Cancel]
+//   [Add PDF...] [Remove] [Restore] 7 pages, 1 removed   [Save] [Save As...] [Cancel]
 
 constexpr int kThumbDx = 140;
 constexpr int kThumbDy = 198;
@@ -211,8 +212,8 @@ struct MergePdfWnd : WindowBase {
     VirtButton* btnSave = nullptr;
     VirtButton* btnSaveAs = nullptr;
     VirtButton* btnCancel = nullptr;
-    // the page count, then the files' colors
-    VirtCustom* info = nullptr;
+    VirtCustom* legend = nullptr;
+    VirtText* status = nullptr;
     bool tornDown = false;
 
     ~MergePdfWnd() override;
@@ -232,7 +233,8 @@ struct MergePdfWnd : WindowBase {
     void OnCancel(VirtMouseEvent* ev = nullptr);
     void OnKey(KeyEvent* ev);
     void OnTimer(WindowBase::TimerEvent* ev);
-    void PaintInfo(VirtPaintCtx* ctx);
+    void PaintLegend(VirtPaintCtx* ctx);
+    Size LegendSize();
 };
 
 static MergePdfWnd* gMergeWnd = nullptr;
@@ -357,8 +359,8 @@ void MergeGrid::ItemsChanged() {
     rowsModel->rows = (len(items) + cols - 1) / cols;
     SetModel(rowsModel);
     ScrollTo(oldScrollY);
-    focusIdx = ClampI(focusIdx, 0, std::max(0, len(items) - 1));
-    anchorIdx = ClampI(anchorIdx, 0, std::max(0, len(items) - 1));
+    focusIdx = clampi(focusIdx, 0, std::max(0, len(items) - 1));
+    anchorIdx = clampi(anchorIdx, 0, std::max(0, len(items) - 1));
     hoverIdx = -1;
     Changed();
     StartRendering();
@@ -440,7 +442,7 @@ int MergeGrid::DropPositionAt(Point pt) {
     // left of a thumbnail's middle: in front of it
     int step = thumbDx + gap;
     int x = pt.x - GridLeft() - (thumbDx / 2);
-    int slot = x < 0 ? 0 : ClampI((x / step) + 1, 0, cols);
+    int slot = x < 0 ? 0 : clampi((x / step) + 1, 0, cols);
     return std::min((row * cols) + slot, n);
 }
 
@@ -679,7 +681,7 @@ void MergeGrid::InsertPages(MergeSource* src, int at) {
     for (MergeItem& it : items) {
         it.selected = false;
     }
-    at = ClampI(at, 0, len(items));
+    at = clampi(at, 0, len(items));
     for (int i = 0; i < src->pageCount; i++) {
         MergeItem it;
         it.src = src;
@@ -943,7 +945,7 @@ void MergeGrid::OnGridTooltip(VirtTooltipEvent* ev) {
 
 // the keyboard's page moves; Shift selects from the anchor to it
 void MergeGrid::MoveFocus(int idx, bool shift) {
-    idx = ClampI(idx, 0, len(items) - 1);
+    idx = clampi(idx, 0, len(items) - 1);
     if (!shift) {
         SelectOnly(idx);
     } else {
@@ -1277,44 +1279,47 @@ bool MergePdfWnd::AddPdf(Str path, int at) {
     return true;
 }
 
-// The page count, then which file a page comes from: its color and its name.
-// One control that takes the free space: a longer text needs no layout, which
-// would end a drag
-void MergePdfWnd::PaintInfo(VirtPaintCtx* ctx) {
-    int nPages = len(grid->items);
-    int nRemoved = 0;
-    for (MergeItem& it : grid->items) {
-        nRemoved += it.removed ? 1 : 0;
+Size MergePdfWnd::LegendSize() {
+    if (len(sources->all) < 2) {
+        return {0, 0};
     }
-    TempStr s = fmt(Tr("%d pages").s, nPages - nRemoved);
-    if (nRemoved > 0) {
-        s = fmt(Tr("%d pages, %d removed").s, nPages - nRemoved, nRemoved);
+    int dx = 0;
+    int dy = 0;
+    int gap = font->averageCharWidth;
+    int swatch = PlatformFontMeasureText(font, StrL("M")).dy * 2 / 3;
+    for (MergeSource* src : sources->all) {
+        Size ts = PlatformFontMeasureText(font, path::GetBaseNameTemp(src->path));
+        dx += swatch + gap + ts.dx + (gap * 3);
+        dy = std::max(dy, ts.dy);
+    }
+    return {dx, dy};
+}
+
+// which file a page comes from: its color, then its name
+void MergePdfWnd::PaintLegend(VirtPaintCtx* ctx) {
+    if (len(sources->all) < 2) {
+        return;
     }
     Rect r = ctx->content;
-    Color col = GetColor(kColWinText);
+    int swatch = PlatformFontMeasureText(font, StrL("M")).dy * 2 / 3;
     int gap = font->averageCharWidth;
-    ctx->gfx->PushClip(ctx->clip.Intersect(r));
-    Size ts = ctx->gfx->MeasureText(s, font);
-    ctx->gfx->DrawText(s, {r.x, r.y, ts.dx, r.dy}, gfxTextVCenter, font, col);
-    int x = r.x + ts.dx + (gap * 4);
-    int swatch = ts.dy * 2 / 3;
-    for (int i = 0; len(sources->all) > 1 && i < len(sources->all); i++) {
-        MergeSource* src = sources->all[i];
+    int x = r.x;
+    for (MergeSource* src : sources->all) {
         TempStr name = path::GetBaseNameTemp(src->path);
-        ts = ctx->gfx->MeasureText(name, font);
-        ctx->gfx->FillRect({x, r.y + ((r.dy - swatch) / 2), swatch, swatch}, src->color);
+        Size ts = ctx->gfx->MeasureText(name, font);
+        int y = r.y + ((r.dy - swatch) / 2);
+        ctx->gfx->FillRect({x, y, swatch, swatch}, src->color);
         x += swatch + gap;
-        ctx->gfx->DrawText(name, {x, r.y, ts.dx, r.dy}, gfxTextVCenter, font, col);
+        ctx->gfx->DrawText(name, {x, r.y, ts.dx, r.dy}, gfxTextVCenter, font, GetColor(kColWinText));
         x += ts.dx + (gap * 3);
     }
-    ctx->gfx->PopClip();
 }
 
-static void PaintMergeInfo(MergePdfWnd* w, VirtPaintCtx* ctx) {
-    w->PaintInfo(ctx);
+static void PaintMergeLegend(MergePdfWnd* w, VirtPaintCtx* ctx) {
+    w->PaintLegend(ctx);
 }
 
-// buttons and the page count after the pages or the selection changed
+// buttons, status and legend after the pages or the selection changed
 void MergePdfWnd::UpdateUI() {
     int nPages = len(grid->items);
     int nRemoved = 0;
@@ -1328,7 +1333,26 @@ void MergePdfWnd::UpdateUI() {
     bool canSave = nPages > nRemoved;
     btnSave->SetIsEnabled(canSave);
     btnSaveAs->SetIsEnabled(canSave);
-    info->Invalidate();
+
+    TempStr s = fmt(Tr("%d pages").s, nPages - nRemoved);
+    if (nRemoved > 0) {
+        s = fmt(Tr("%d pages, %d removed").s, nPages - nRemoved, nRemoved);
+    }
+    status->SetText(s);
+    status->Invalidate();
+
+    // a layout resets the virtual focus
+    Size legendSize = LegendSize();
+    if (legendSize == legend->idealSize || !hwnd) {
+        return;
+    }
+    legend->idealSize = legendSize;
+    bool hadFocus = grid->HasFlag(vwfFocused);
+    DoLayout();
+    HwndScheduleRepaint(hwnd);
+    if (hadFocus) {
+        SetFocusTo(grid);
+    }
 }
 
 //--- where Add PDF... puts the pages
@@ -1388,7 +1412,7 @@ void InsertPosWnd::OnOk(VirtMouseEvent*) {
     if (rbStart->IsChecked()) {
         at = 0;
     } else if (rbAfter->IsChecked()) {
-        at = ClampI(ParseInt(editPage->GetTextTemp()), 0, nItems);
+        at = clampi(ParseInt(editPage->GetTextTemp()), 0, nItems);
     }
     *atOut = at;
     ScheduleDelete();
@@ -1692,6 +1716,13 @@ bool MergePdfWnd::Create(MainWindow* w, WindowTab* tab) {
 
     int btnGap = font->averageCharWidth;
 
+    auto* top = new HBox();
+    top->alignCross = CrossAxisAlign::CrossCenter;
+    top->AddChild(new Spacer(0, 0), 1);
+    legend = new VirtCustom();
+    legend->onPaint = MkFunc1(PaintMergeLegend, this);
+    top->AddChild(legend);
+
     grid = new MergeGrid(this, sources, GetAppFont(), GetDpi());
     sources->grid = grid;
 
@@ -1707,10 +1738,9 @@ bool MergePdfWnd::Create(MainWindow* w, WindowTab* tab) {
     btnRestore = NewThemedButton(hwnd, Tr("Restore"), font, false);
     btnRestore->onClick = MkMethod1<MergePdfWnd, VirtMouseEvent*, &MergePdfWnd::OnRestore>(this);
     bottom->AddChild(btnRestore);
-    info = new VirtCustom();
-    info->idealSize = {0, PlatformFontMeasureText(font, StrL("M")).dy};
-    info->onPaint = MkFunc1(PaintMergeInfo, this);
-    bottom->AddChild(info, 1);
+    // takes the free space, so a longer text needs no layout (which would end a drag)
+    status = NewVirtText({.font = font, .isRtl = IsUIRtl()});
+    bottom->AddChild(status, 1);
     btnSave = NewThemedButton(hwnd, Tr("Save"), font, false);
     btnSave->onClick = MkMethod1<MergePdfWnd, VirtMouseEvent*, &MergePdfWnd::OnSave>(this);
     bottom->AddChild(btnSave);
@@ -1724,13 +1754,15 @@ bool MergePdfWnd::Create(MainWindow* w, WindowTab* tab) {
     int gap = DpiScaleByDpi(GetDpi(), kDialogPadding);
     auto* vbox = new VBox();
     vbox->alignCross = CrossAxisAlign::Stretch;
+    vbox->AddChild(top);
+    vbox->AddChild(new Spacer(0, gap));
     vbox->AddChild(grid, 1);
     vbox->AddChild(new Spacer(0, gap));
     vbox->AddChild(bottom);
     layout = new Padding(vbox, Insets{gap, gap, gap, gap});
 
     grid->InsertPages(sources->all[0], 0);
-    grid->SelectOnly(ClampI(tab->ctrl->CurrentPageNo() - 1, 0, std::max(len(grid->items) - 1, 0)));
+    grid->SelectOnly(clampi(tab->ctrl->CurrentPageNo() - 1, 0, len(grid->items) - 1));
 
     // most of the work area of the document's monitor
     Rect work = GetWorkAreaRect(HwndWindowRect(w->hwndFrame), w->hwndFrame);

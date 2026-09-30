@@ -273,6 +273,7 @@ function sumatrapdf_files()
     "AppTools.*",
     "Canvas.*",
     "PageThumbnails.*",
+    "MergePdf.*",
     "AnnotPlacement.*",
     "AnnotTextPopup.*",
     "AnnotEditToolbar.*",

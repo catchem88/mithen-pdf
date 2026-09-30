@@ -1076,6 +1076,10 @@ static MenuDef menuDefDocumentOperations[] = {
         CmdPdfDeletePages,
     },
     {
+        TrN("Merge PDF..."),
+        CmdMergePDF,
+    },
+    {
         TrN("Extract Text From Document"),
         CmdDocumentExtractText,
     },
