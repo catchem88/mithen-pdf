@@ -915,9 +915,8 @@ static void ApplyRemoveItem(RemoveItemOp* op) {
     CommandPaletteWnd* wnd = op->wnd;
     WindowTab* tab = op->tab;
     int currSel = op->currSel;
-    defer {
-        delete op;
-    };
+
+    AutoDelete opDel(op);
 
     if (gCommandPaletteWnd != wnd) {
         return;
