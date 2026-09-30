@@ -1022,6 +1022,9 @@
     <ClCompile Include="..\src\SelectionTranslate.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\Settings.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\SettingsDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
