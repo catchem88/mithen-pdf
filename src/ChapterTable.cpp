@@ -117,6 +117,11 @@ int ChapterTable::Generation() {
     return AtomicIntGet(&generation);
 }
 
+// the pages changed without their count changing, e.g. reordered
+void ChapterTable::BumpGeneration() {
+    AtomicIntInc(&generation);
+}
+
 void ChapterTable::Reset() {
     AutoUnlockMutex scope(&mutex);
     int n = len(pageCounts);

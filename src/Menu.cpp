@@ -46,6 +46,7 @@
 #include "ReadAloud.h"
 #include "ReadingAutoScroll.h"
 #include "ReadingBar.h"
+#include "TableOfContents.h"
 #include "Menu.h"
 
 // value associated with menu item for owner-drawn purposes
@@ -333,6 +334,10 @@ static MenuDef menuDefView[] = {
     {
         TrN("Show Book&marks"),
         CmdToggleBookmarks,
+    },
+    {
+        TrN("Sho&w Thumbnails"),
+        CmdToggleThumbnails,
     },
     {
         TrN("Show Me&nu"),
@@ -1160,6 +1165,10 @@ static MenuDef menuDefContext[] = {
         CmdToggleBookmarks,
     },
     {
+        TrN("Show &Thumbnails"),
+        CmdToggleThumbnails,
+    },
+    {
         TrN("Sh&ow Toolbar"),
         CmdToggleToolbar,
     },
@@ -1816,8 +1825,11 @@ static void MenuUpdateStateForWindow(MainWindow* win) {
     MenuSetEnabled(win->menu, CmdToggleBookmarks, enabled);
 
     bool documentSpecific = win->IsDocLoaded();
-    bool checked = documentSpecific ? win->uiState.tocVisible : gSettings->showToc;
+    bool thumbnailsShown = win->uiState.tocVisible && SidebarShowsThumbnails(win);
+    bool checked = documentSpecific ? win->uiState.tocVisible && !thumbnailsShown : gSettings->showToc;
     MenuSetChecked(win->menu, CmdToggleBookmarks, checked);
+    MenuSetEnabled(win->menu, CmdToggleThumbnails, CanShowThumbnails(tab));
+    MenuSetChecked(win->menu, CmdToggleThumbnails, thumbnailsShown);
 
     {
         // checked when mode is not "hide" (show or overlay)
@@ -2002,8 +2014,11 @@ void OnWindowContextMenu(MainWindow* win, int x, int y) {
     SetMenuStateForSelection(tab, popup);
 
     MenuUpdatePrintItem(win, popup, true);
+    bool thumbnailsShown = win->uiState.tocVisible && SidebarShowsThumbnails(win);
     MenuSetEnabled(popup, CmdToggleBookmarks, win->ctrl->HasToc());
-    MenuSetChecked(popup, CmdToggleBookmarks, win->uiState.tocVisible);
+    MenuSetChecked(popup, CmdToggleBookmarks, win->uiState.tocVisible && !thumbnailsShown);
+    MenuSetEnabled(popup, CmdToggleThumbnails, CanShowThumbnails(tab));
+    MenuSetChecked(popup, CmdToggleThumbnails, thumbnailsShown);
 
     Str filePath = win->ctrl->GetFilePath();
 
