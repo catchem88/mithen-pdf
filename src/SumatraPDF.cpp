@@ -2390,7 +2390,8 @@ static bool ShouldUsePageAspectForView(Str path) {
         return false;
     }
     FileType ft = GuessFileTypeFromName(path, true);
-    return ft == FileType::PDF || ft == FileType::Xps || ft == FileType::DjVu || ft == FileType::PS;
+    return ft == FileType::PDF || ft == FileType::Xps || ft == FileType::DjVu || ft == FileType::PS ||
+           ft == FileType::Dvi;
 }
 
 static void ApplyPageAspectView(EngineBase* engine, DisplayMode* modeOut, float* zoomOut) {
@@ -6212,9 +6213,13 @@ static bool AppendFileFilterForDoc(DocController* ctrl, str::Builder& fileFilter
         fileFilter.Append(fmt(Tr("Image files (*.%s)").s, imgDefExt));
     } else if (type == kindEngineImageDir) {
         return false; // only show "All files"
-    } else if (type == kindEnginePostScript) {
-        // also offer the PDF Ghostscript produced (EnginePs::SaveFileAs writes it)
-        fileFilter.Append(Tr("PostScript documents"));
+    } else if (type == kindEnginePostScript || type == kindEngineDvi) {
+        // also offer the PDF the converter produced (SaveFileAs writes it)
+        if (type == kindEngineDvi) {
+            fileFilter.Append(Tr("DVI documents"));
+        } else {
+            fileFilter.Append(Tr("PostScript documents"));
+        }
         fileFilter.Append(fmt("\1*%s\1", ctrl->GetDefaultFileExt()));
         fileFilter.Append(Tr("PDF documents"));
         fileFilter.Append(StrL("\1*.pdf\1"));
@@ -6369,11 +6374,12 @@ static bool SaveDocAs(MainWindow* win, Str dstPath) {
     EngineBase* engine = dm ? dm->GetEngine() : nullptr;
 
     TempStr realDstFileName = str::DupTemp(dstPath);
-    bool psAsPdf = engine && engine->kind == kindEnginePostScript && str::EndsWithI(realDstFileName, StrL(".pdf"));
+    bool convertedAsPdf = engine && str::EndsWithI(realDstFileName, StrL(".pdf")) &&
+                          (engine->kind == kindEnginePostScript || engine->kind == kindEngineDvi);
 
     // Make sure that the file has a valid extension
     Str defExt = ctrl->GetDefaultFileExt();
-    if (!psAsPdf && !str::EndsWithI(realDstFileName, defExt)) {
+    if (!convertedAsPdf && !str::EndsWithI(realDstFileName, defExt)) {
         realDstFileName = str::JoinTemp(realDstFileName, defExt);
     }
 
@@ -6383,7 +6389,7 @@ static bool SaveDocAs(MainWindow* win, Str dstPath) {
     // Replace with EngineGetDocumentData() and save that if not empty
     bool ok = true;
     TempStr errorMsg;
-    if (psAsPdf || (!file::Exists(srcFileName) && engine)) {
+    if (convertedAsPdf || (!file::Exists(srcFileName) && engine)) {
         // Recreate nonexistent files from memory...
         logf("calling engine->SaveFileAs(%s)\n", realDstFileName);
         ok = engine->SaveFileAs(realDstFileName);
@@ -6889,6 +6895,7 @@ static void BuildOpenFileFilters(OpenFileFilterList& out) {
         {Tr("XPS documents"), StrL("*.xps;*.oxps"), true},
         {Tr("DjVu documents"), StrL("*.djvu"), true},
         {Tr("PostScript documents"), StrL("*.ps;*.eps"), IsEnginePsAvailable()},
+        {Tr("DVI documents"), StrL("*.dvi"), IsEngineDviAvailable()},
         {Tr("Comic books"), StrL("*.cbz;*.cbr;*.cb7;*.cbt"), true},
         {Tr("CHM documents"), StrL("*.chm"), true},
         {Tr("SVG documents"), StrL("*.svg"), true},
@@ -16544,6 +16551,7 @@ static void DeleteStaleOpenCacheFiles() {
 
 static void DeleteStaleFilesAsync() {
     DeleteStaleCbxCacheFiles();
+    DeleteStaleDviCache();
     DeleteStaleOpenCacheFiles();
     DeleteOldPdfPreviewLogs(32);
 
@@ -16610,7 +16618,7 @@ static void DeleteStaleFilesAsync() {
     di.includeDirs = true;
     for (DirIterEntry* de : di) {
         Str name = de->name;
-        if (str::Eq(name, StrL("cbx-cache"))) {
+        if (str::Eq(name, StrL("cbx-cache")) || str::Eq(name, StrL("dvi-cache"))) {
             continue;
         }
 
