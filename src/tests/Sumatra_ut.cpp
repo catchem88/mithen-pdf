@@ -89,6 +89,16 @@ bool AnnotSearch_UnitTests();
 void ReadAloudHighlight_UnitTests();
 bool RenderCache_UnitTestCookieUnlocked();
 
+static void ParseFileArgsTest() {
+    FileArgs* fa = ParseFileArgs(StrL("C:\\foo.pdf?page=4"));
+    utassert(fa && str::Eq(fa->cleanPath, StrL("C:\\foo.pdf")) && fa->pageNumber == 4);
+    delete fa;
+    utassert(!ParseFileArgs(StrL("C:\\foo.pdf")));
+    utassert(!ParseFileArgs(StrL("\\\\?\\C:\\foo.pdf")));
+    // a garbled drive letter: no file before the '?'
+    utassert(!ParseFileArgs(StrL("?:\\foo.pdf")));
+}
+
 static void ParseCommandLineTest() {
     {
         Flags i;
@@ -394,6 +404,7 @@ static void SumatraPDF_UnitTests() {
     colorTest();
     BenchRangeTest();
     ParseCommandLineTest();
+    ParseFileArgsTest();
     versioncheck_test();
     hexstrTest();
 }
