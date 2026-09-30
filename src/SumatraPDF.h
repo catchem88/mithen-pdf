@@ -342,6 +342,10 @@ void SwitchToDisplayMode(MainWindow* win, DisplayMode displayMode, bool keepCont
 void OnDocumentVerticalScrollIntent(MainWindow* win, bool down);
 void DismissNextFileScrollHint(MainWindow* win);
 void MainWindowRerender(MainWindow* win, bool includeNonClientArea = false);
+void GetFrameNcStrips(MainWindow*, Vec<Rect>& out);
+bool CanEditPagesInTab(WindowTab*);
+bool MovePagesInTab(WindowTab*, const Vec<int>& pages, int beforePage);
+int InsertPdfInTab(WindowTab*, Str path, int beforePage);
 
 TempStr PageInfoOverlayResultTemp(Str pathTwoPages, Str pathOnePage, int* exitCodeOut = nullptr);
 TempStr WindowStateDuringLoadResultTemp(int* exitCodeOut = nullptr);
