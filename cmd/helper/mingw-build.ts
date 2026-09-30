@@ -376,6 +376,7 @@ const sumatraFiles: FileGroup[] = [
       "EutlTrust.*",
       "StressTesting.*",
       "SvgIcons.*",
+      "SidebarPanel.*",
       "TableOfContents.*",
       "Tabs.*",
       "TabGroupsManage.*",
