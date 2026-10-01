@@ -342,6 +342,7 @@ void SwitchToDisplayMode(MainWindow* win, DisplayMode displayMode, bool keepCont
 void OnDocumentVerticalScrollIntent(MainWindow* win, bool down);
 void DismissNextFileScrollHint(MainWindow* win);
 void MainWindowRerender(MainWindow* win, bool includeNonClientArea = false);
+void RerenderTabPage(WindowTab*, int pageNo);
 void GetFrameNcStrips(MainWindow*, Vec<Rect>& out);
 bool CanEditPagesInTab(WindowTab*);
 bool MovePagesInTab(WindowTab*, const Vec<int>& pages, int beforePage);
