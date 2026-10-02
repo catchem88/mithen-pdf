@@ -13,8 +13,7 @@ constexpr int kFrameResizeHitTest = 5;
 
 extern bool gRedrawLog;
 
-constexpr const char* kWebsiteURL = "https://www.sumatrapdfreader.org/";
-constexpr const char* kManualURL = "https://www.sumatrapdfreader.org/manual";
+constexpr const char* kWebsiteURL = "https://github.com/catchem88/mithen-pdf";
 constexpr const char* kContributeTranslationsURL = "https://www.sumatrapdfreader.org/docs/Contribute-translation";
 
 #ifndef kCrashReportUrl
@@ -48,7 +47,7 @@ enum class Perm : uint {
     InternetAccess = 1 << 0,
     // enables opening and saving documents and launching external viewers
     DiskAccess = 1 << 1,
-    // enables persistence of preferences to disk (includes the Frequently Read page and Favorites)
+    // enables persistence of preferences to disk (includes the Frequently Read page)
     SavePreferences = 1 << 2,
     // enables setting as default viewer
     RegistryAccess = 1 << 3,
@@ -86,7 +85,6 @@ constexpr Perm operator~(Perm lhs) {
     return static_cast<Perm>(v);
 }
 
-struct Favorites;
 struct FileHistory;
 struct MainWindow;
 extern Func1<MainWindow*> gAfterLayout;
@@ -112,7 +110,6 @@ extern Flags* gCli;
 
 extern Str gPluginURL;
 extern bool gMyWindowWasEmbedded;
-extern Favorites gFavorites;
 extern WNDPROC DefWndProcCloseButton;
 extern RenderCache* gRenderCache;
 
@@ -140,8 +137,6 @@ bool CanAccessDisk();
 bool AnnotationsAreDisabled();
 bool IsUIRtl();
 bool SumatraLaunchBrowser(Str url);
-void LaunchDocumentation(Str docURI);
-bool MaybeLaunchDocumentation(Str url);
 bool OpenFileExternally(Str path);
 void CloseCurrentTab(MainWindow* win, bool quitIfLast);
 void CloseTab(WindowTab* tab, bool quitIfLast);
@@ -163,9 +158,7 @@ enum class SidebarResizeFrame {
     Keep,
     Adjust
 };
-void SetSidebarVisibility(MainWindow* win, bool tocVisible, bool showFavorites,
-                          SidebarResizeFrame = SidebarResizeFrame::Keep);
-void RememberFavTreeExpansionState(MainWindow* win);
+void SetSidebarVisibility(MainWindow* win, bool tocVisible, SidebarResizeFrame = SidebarResizeFrame::Keep);
 void AdvanceFocus(MainWindow* win);
 void SetCurrentLanguageAndRefreshUI(Str langCode);
 void UpdateDocumentColors();
@@ -221,7 +214,7 @@ constexpr u32 kUiTabsDirty = 0x8;    // repaint the tab bar
 // this request doesn't need the toolbars re-fit (sidebar/splitter changes);
 // ignored if another pending request wants them updated
 constexpr u32 kUiNoToolbars = 0x10;
-constexpr u32 kUiSidebarDirty = 0x20; // repaint toc/favorites boxes and their splitters
+constexpr u32 kUiSidebarDirty = 0x20; // repaint the toc box and its splitter
 
 void ScheduleUiUpdate(MainWindow* win, u32 flags = kUiRelayout, int sidebarDx = -1);
 void DuplicateTabInNewWindow(WindowTab* tab);
@@ -279,7 +272,7 @@ struct LoadArgs {
     bool deferTabUpdate = false;
     bool async = false;
     bool activateExisting = false;
-    // do not add to File History / Windows Recent (CmdOpenFileNoHistory)
+    // do not add to File History / Windows Recent
     bool skipHistory = false;
     // with activateExisting: only switch to an existing tab in args->win (UI
     // open paths). DDE and other global lookups leave this false.

@@ -9092,13 +9092,25 @@ bool EngineMupdfSaveUpdated(EngineBase* engine, Str path, const ShowErrorCb& sho
 
     Str whyNotFromMemory = WhyNotSaveFromMemory(epdf, path, save_opts);
     bool fromMemory = len(whyNotFromMemory) == 0;
+    // A non-incremental save truncates the output file. Doing that to the very
+    // file mupdf is still reading corrupts the document (and any reload racing
+    // the write), so write a sibling temp file and swap it in.
+    bool needTemp = inPlace && !fromMemory && !save_opts.do_incremental;
+    TempStr tmpPath;
+    if (needTemp) {
+        tmpPath = fmt("%s.tmp%d", path, (int)GetCurrentProcessId());
+    }
+    Str savePath = needTemp ? Str(tmpPath) : path;
     bool ok = false;
     fz_var(ok);
     fz_try(ctx) {
         if (fromMemory) {
             SaveIncrementalFromMemory(epdf, path, &save_opts);
         } else {
-            pdf_save_document(ctx, epdf->pdfdoc, CStrTemp(path), &save_opts);
+            pdf_save_document(ctx, epdf->pdfdoc, CStrTemp(savePath), &save_opts);
+            if (needTemp && !file::RenameReplace(path, tmpPath)) {
+                fz_throw(ctx, FZ_ERROR_SYSTEM, "could not replace '%s'", CStrTemp(path));
+            }
         }
         ok = true;
         auto dur = TimeSinceInMs(timeStart);
@@ -9109,6 +9121,9 @@ bool EngineMupdfSaveUpdated(EngineBase* engine, Str path, const ShowErrorCb& sho
     }
     fz_catch(ctx) {
         fz_report_error(ctx);
+        if (needTemp) {
+            file::Delete(tmpPath);
+        }
         const char* mupdfErr = fz_caught_message(ctx);
         logf("Saving '%s' failed with: '%s'\n", path, Str(mupdfErr));
         if (showErrorFunc.IsValid()) {
@@ -10289,6 +10304,210 @@ Annotation* EngineMupdfGetAdjacentWidget(EngineBase* engine, Annotation* cur, bo
         bool editable =
             (wt == PDF_WIDGET_TYPE_TEXT) || (wt == PDF_WIDGET_TYPE_COMBOBOX) || (wt == PDF_WIDGET_TYPE_LISTBOX);
         if (editable && !(flags & PDF_FIELD_IS_READ_ONLY)) {
+            return w;
+        }
+    }
+    return nullptr;
+}
+
+// The widget's PDF object number (0 if unavailable). A stable, unique identity
+// for a widget: unlike the field name it distinguishes the radios of one group.
+int EngineMupdfGetWidgetObjNum(Annotation* w) {
+    if (!w || !w->engine || !w->pdfannot) {
+        return 0;
+    }
+    EngineMupdf* epdf = AsEngineMupdf(w->engine);
+    if (!epdf) {
+        return 0;
+    }
+    auto* ctx = epdf->Ctx();
+    AutoUnlockRecursiveMutex cs(&epdf->docLock);
+    return pdf_to_num(ctx, pdf_annot_obj(ctx, w->pdfannot));
+}
+
+// Rebuild the cached widget wrappers of one page from the live mupdf widgets.
+// The list can be momentarily incomplete right after a form edit, which made Tab
+// find no next field. Takes the locks in the same order as SyncPagesAfterUndoRedo.
+void EngineMupdfResyncPageWidgets(EngineBase* engine, int pageNo) {
+    EngineMupdf* e = AsEngineMupdf(engine);
+    if (!e || !e->pdfdoc || pageNo < 1) {
+        return;
+    }
+    auto* ctx = e->Ctx();
+    AutoUnlockRecursiveMutex pagesScope(&e->pagesLock);
+    AutoUnlockMutex renderScope(&e->renderLock);
+    FzPageInfo* pi = e->PageInfoByPageNo(pageNo);
+    if (!pi || !pi->page || !pi->annotsLoaded) {
+        return;
+    }
+    Vec<pdf_annot*> liveWidgets;
+    {
+        AutoUnlockRecursiveMutex docScope(&e->docLock);
+        fz_try(ctx) {
+            pdf_page* page = pdf_page_from_fz_page(ctx, pi->page);
+            for (pdf_annot* a = page ? pdf_first_widget(ctx, page) : nullptr; a; a = pdf_next_widget(ctx, a)) {
+                VecAppend(liveWidgets, a);
+            }
+        }
+        fz_catch(ctx) {
+            fz_report_error(ctx);
+            return;
+        }
+    }
+    Vec<Annotation*> removed;
+    ResyncWrapperList(e, pageNo, pi->widgets, liveWidgets, removed);
+    for (Annotation* a : removed) {
+        delete a;
+    }
+}
+
+// Tab: the next/previous fillable widget after the one with object number
+// objNum on pageNo. When includeButtons, checkboxes/radios are included.
+Annotation* EngineMupdfGetAdjacentWidgetByObjNum(EngineBase* engine, int pageNo, int objNum, bool forward,
+                                                 bool includeButtons) {
+    EngineMupdf* epdf = AsEngineMupdf(engine);
+    if (!epdf || !epdf->pdfdoc || objNum <= 0) {
+        return nullptr;
+    }
+    FzPageInfo* pi = epdf->GetFzPageInfoCanFail(pageNo);
+    if (!pi) {
+        return nullptr;
+    }
+    Vec<Annotation*>& ws = pi->widgets;
+    int n = len(ws);
+    if (n == 0) {
+        return nullptr;
+    }
+    auto* ctx = epdf->Ctx();
+    AutoUnlockRecursiveMutex cs(&epdf->docLock);
+    int idx = -1;
+    for (int i = 0; i < n; i++) {
+        if (pdf_to_num(ctx, pdf_annot_obj(ctx, ws[i]->pdfannot)) == objNum) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx < 0) {
+        return nullptr;
+    }
+    for (int step = 1; step <= n; step++) {
+        int j = forward ? (idx + step) % n : (idx - step + n) % n;
+        if (j == idx) {
+            continue; // don't return the widget we started from
+        }
+        Annotation* w = ws[j];
+        int wt = PDF_WIDGET_TYPE_UNKNOWN;
+        int flags = 0;
+        fz_try(ctx) {
+            wt = pdf_widget_type(ctx, w->pdfannot);
+            flags = pdf_annot_field_flags(ctx, w->pdfannot);
+        }
+        fz_catch(ctx) {
+            fz_report_error(ctx);
+        }
+        bool editable =
+            (wt == PDF_WIDGET_TYPE_TEXT) || (wt == PDF_WIDGET_TYPE_COMBOBOX) || (wt == PDF_WIDGET_TYPE_LISTBOX);
+        bool button = (wt == PDF_WIDGET_TYPE_CHECKBOX) || (wt == PDF_WIDGET_TYPE_RADIOBUTTON);
+        if ((editable || (includeButtons && button)) && !(flags & PDF_FIELD_IS_READ_ONLY)) {
+            return w;
+        }
+    }
+    return nullptr;
+}
+
+// The widget with object number objNum on pageNo (any field type), or nullptr.
+Annotation* EngineMupdfGetWidgetByObjNum(EngineBase* engine, int pageNo, int objNum) {
+    EngineMupdf* epdf = AsEngineMupdf(engine);
+    if (!epdf || !epdf->pdfdoc || objNum <= 0) {
+        return nullptr;
+    }
+    FzPageInfo* pi = epdf->GetFzPageInfoCanFail(pageNo);
+    if (!pi) {
+        return nullptr;
+    }
+    auto* ctx = epdf->Ctx();
+    AutoUnlockRecursiveMutex cs(&epdf->docLock);
+    for (Annotation* w : pi->widgets) {
+        if (pdf_to_num(ctx, pdf_annot_obj(ctx, w->pdfannot)) == objNum) {
+            return w;
+        }
+    }
+    return nullptr;
+}
+
+// The widget named `name` on pageNo (any field type), or nullptr.
+Annotation* EngineMupdfGetWidgetByName(EngineBase* engine, int pageNo, Str name) {
+    EngineMupdf* epdf = AsEngineMupdf(engine);
+    if (!epdf || !epdf->pdfdoc || len(name) == 0) {
+        return nullptr;
+    }
+    FzPageInfo* pi = epdf->GetFzPageInfoCanFail(pageNo);
+    if (!pi) {
+        return nullptr;
+    }
+    auto* ctx = epdf->Ctx();
+    AutoUnlockRecursiveMutex cs(&epdf->docLock);
+    for (Annotation* w : pi->widgets) {
+        char* wn = pdf_load_field_name(ctx, pdf_annot_obj(ctx, w->pdfannot));
+        bool match = str::Eq(Str(wn), name);
+        fz_free(ctx, wn);
+        if (match) {
+            return w;
+        }
+    }
+    return nullptr;
+}
+
+// Widget named `name` on pageNo, then the next/previous editable widget in page
+// order. Tab uses this instead of the Annotation* variant because committing an
+// edit can rebuild the widget list and invalidate the pointer we started from.
+Annotation* EngineMupdfGetAdjacentWidgetByName(EngineBase* engine, int pageNo, Str name, bool forward,
+                                               bool includeButtons) {
+    EngineMupdf* epdf = AsEngineMupdf(engine);
+    if (!epdf || !epdf->pdfdoc || len(name) == 0) {
+        return nullptr;
+    }
+    FzPageInfo* pi = epdf->GetFzPageInfoCanFail(pageNo);
+    if (!pi) {
+        return nullptr;
+    }
+    Vec<Annotation*>& ws = pi->widgets;
+    int n = len(ws);
+    if (n == 0) {
+        return nullptr;
+    }
+    auto* ctx = epdf->Ctx();
+    AutoUnlockRecursiveMutex cs(&epdf->docLock);
+    int idx = -1;
+    for (int i = 0; i < n; i++) {
+        Annotation* w = ws[i];
+        char* wn = pdf_load_field_name(ctx, pdf_annot_obj(ctx, w->pdfannot));
+        bool match = str::Eq(Str(wn), name);
+        fz_free(ctx, wn);
+        if (match) {
+            idx = i;
+            break;
+        }
+    }
+    if (idx < 0) {
+        return nullptr;
+    }
+    for (int step = 1; step <= n; step++) {
+        int j = forward ? (idx + step) % n : (idx - step + n) % n;
+        Annotation* w = ws[j];
+        int wt = PDF_WIDGET_TYPE_UNKNOWN;
+        int flags = 0;
+        fz_try(ctx) {
+            wt = pdf_widget_type(ctx, w->pdfannot);
+            flags = pdf_annot_field_flags(ctx, w->pdfannot);
+        }
+        fz_catch(ctx) {
+            fz_report_error(ctx);
+        }
+        bool editable =
+            (wt == PDF_WIDGET_TYPE_TEXT) || (wt == PDF_WIDGET_TYPE_COMBOBOX) || (wt == PDF_WIDGET_TYPE_LISTBOX);
+        bool button = (wt == PDF_WIDGET_TYPE_CHECKBOX) || (wt == PDF_WIDGET_TYPE_RADIOBUTTON);
+        if ((editable || (includeButtons && button)) && !(flags & PDF_FIELD_IS_READ_ONLY)) {
             return w;
         }
     }

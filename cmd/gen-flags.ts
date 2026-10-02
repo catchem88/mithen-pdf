@@ -98,6 +98,8 @@ const args = [
     "StartPerfLog", "start-perf-log",
     "LogPerfFile", "log-perf-file",
     "NoDesktopShortcut", "no-desktop-shortcut",
+    "NoResetSettings", "no-reset-settings",
+    "WithResetSettings", "with-reset-settings",
 ];
 
 function generateCode(): string {

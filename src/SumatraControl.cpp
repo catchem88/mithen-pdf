@@ -38,7 +38,6 @@
 #include "Selection.h"
 #include "SelectionHandlers.h"
 #include "FileHistory.h"
-#include "Favorites.h"
 #include "PagePosition.h"
 #include "SelectionTranslate.h"
 #include "ImageSaveCropResize.h"
@@ -51,7 +50,6 @@
 #include "SelectionToolbar.h"
 #include "HomePage.h"
 #include "Notifications.h"
-#include "AIChatCommon.h"
 #include "SumatraDialogs.h"
 #include "AnnotEditToolbar.h"
 #include "AnnotFilterToolbar.h"
@@ -108,135 +106,17 @@ static TempStr DpiResultTemp(Str action, int* exitCodeOut) {
         return finish(1);
     }
     MainWindow* win = gWindows[0];
-    int aiClose = 0;
-    if (win->aiChatHeader && win->aiChatHeader->ChildrenCount() > 1) {
-        if (VirtCloseButton* b = AsVirtCloseButton(win->aiChatHeader->LayoutChildAt(1))) {
-            aiClose = b->idealSize.dy;
-        }
-    }
     int findH = FindWindowFontHeight(win);
     if (findH <= 0) {
         findH = FindBarFontHeight(win);
     }
     int findBarDy = FindBarWindowHeight(win);
-    out.Append(fmt(
-        "frame=%d current=%d home=%d tocLabel=%d tocEdit=%d tocClose=%d favClose=%d aiLabel=%d aiInput=%d "
-        "aiCheckbox=%d aiClose=%d find=%d findBarDy=%d\n",
-        win->frameDpi, DpiGet(), FontHeight(win->homeSearch ? win->homeSearch->GetFont() : nullptr),
-        FontHeight(win->tocLabel ? win->tocLabel->font : nullptr),
-        FontHeight(win->tocFilterEdit ? win->tocFilterEdit->GetFont() : nullptr),
-        win->tocCloseBtn ? win->tocCloseBtn->idealSize.dy : 0, win->favCloseBtn ? win->favCloseBtn->idealSize.dy : 0,
-        FontHeight(win->aiChatLabel ? win->aiChatLabel->font : nullptr),
-        FontHeight(win->aiChatInput ? win->aiChatInput->GetFont() : nullptr),
-        FontHeight(win->aiChatCheckbox ? win->aiChatCheckbox->GetFont() : nullptr), aiClose, findH, findBarDy));
+    out.Append(fmt("frame=%d current=%d home=%d tocLabel=%d tocEdit=%d tocClose=%d find=%d findBarDy=%d\n",
+                   win->frameDpi, DpiGet(), FontHeight(win->homeSearch ? win->homeSearch->GetFont() : nullptr),
+                   FontHeight(win->tocLabel ? win->tocLabel->font : nullptr),
+                   FontHeight(win->tocFilterEdit ? win->tocFilterEdit->GetFont() : nullptr),
+                   win->tocCloseBtn ? win->tocCloseBtn->idealSize.dy : 0, findH, findBarDy));
     return finish(0);
-}
-
-// Silent add for -dbg-control tests (no name dialog, no settings flush).
-static void AddFavoriteSilent(MainWindow* win, int pageNo) {
-    if (!win || !win->IsDocLoaded() || !win->ctrl) {
-        return;
-    }
-    WindowTab* tab = win->CurrentTab();
-    if (!tab || len(tab->filePath) == 0 || !win->ctrl->ValidPageNo(pageNo)) {
-        return;
-    }
-    Str path = tab->filePath;
-    FileState* fs = FileHistoryFindByPath(path);
-    if (!fs) {
-        fs = NewFileState(path);
-        FileHistoryAppend(fs);
-    }
-    if (!fs->favorites) {
-        return;
-    }
-    TempStr storedPos = StoredPagePosForPageTemp(win->ctrl, pageNo);
-    for (Favorite* fav : *fs->favorites) {
-        if (str::Eq(fav->pageNo, storedPos)) {
-            return;
-        }
-    }
-    TempStr pageLabel = win->ctrl->GetPageLabeTemp(pageNo);
-    TempStr plainLabel = fmt("%d", pageNo);
-    bool needsLabel = pageLabel && !str::Eq(plainLabel, pageLabel) && !win->ctrl->HasChapters();
-    Str pl = needsLabel ? pageLabel : Str{};
-    Favorite* fn = NewFavorite(storedPos, {}, pl);
-    DisplayModel* dm = win->AsFixed();
-    if (dm && dm->GetScrollState().page == pageNo) {
-        ScrollState ss = dm->GetScrollState();
-        fn->scrollPos = PointF((float)ss.x, (float)ss.y);
-    }
-    VecAppend(*fs->favorites, fn);
-}
-
-// Drive favorites on the already-open document for tests/issue-3744.ts.
-// action: "add" | "goto" | "next" | "prev" | "page". pageNo is used by add/goto.
-static TempStr FavoriteNavResultTemp(Str action, int pageNo, int* exitCodeOut) {
-    str::Builder out;
-    auto finish = [&](Str msg, int code) -> TempStr {
-        out.Append(msg);
-        out.AppendChar('\n');
-        if (exitCodeOut) {
-            *exitCodeOut = code;
-        }
-        return ToStrTemp(out);
-    };
-
-    if (len(gWindows) == 0) {
-        return finish(StrL("NOTREADY no-window"), 2);
-    }
-    MainWindow* win = gWindows[0];
-    if (!win || !win->IsDocLoaded() || !win->ctrl) {
-        return finish(StrL("NOTREADY no-doc"), 2);
-    }
-
-    if (str::EqI(action, StrL("add"))) {
-        if (!win->ctrl->ValidPageNo(pageNo)) {
-            return finish(fmt("ERROR bad-page page=%d", pageNo), 1);
-        }
-        AddFavoriteSilent(win, pageNo);
-    } else if (str::EqI(action, StrL("goto"))) {
-        if (!win->ctrl->ValidPageNo(pageNo)) {
-            return finish(fmt("ERROR bad-page page=%d", pageNo), 1);
-        }
-        win->ctrl->GoToPage(pageNo, true);
-    } else if (str::EqI(action, StrL("goto-fav"))) {
-        if (!win->ctrl->ValidPageNo(pageNo)) {
-            return finish(fmt("ERROR bad-page page=%d", pageNo), 1);
-        }
-        FileState* fs = FileHistoryFindByPath(win->ctrl->GetFilePath());
-        Favorite* fav = nullptr;
-        if (fs && fs->favorites) {
-            for (Favorite* f : *fs->favorites) {
-                if (ParseStoredPagePos(f->pageNo).pageNo == pageNo) {
-                    fav = f;
-                    break;
-                }
-            }
-        }
-        if (!fav) {
-            return finish(fmt("ERROR no-fav page=%d", pageNo), 1);
-        }
-        JumpToFavorite(win, fav);
-    } else if (str::EqI(action, StrL("next"))) {
-        GoToNextFavorite(win, true);
-    } else if (str::EqI(action, StrL("prev"))) {
-        GoToNextFavorite(win, false);
-    } else if (str::EqI(action, StrL("page"))) {
-        // report only
-    } else {
-        return finish(fmt("ERROR unknown-action action=%s", action), 1);
-    }
-
-    int cur = win->ctrl->CurrentPageNo();
-    int y = -1;
-    DisplayModel* dm = win->AsFixed();
-    if (dm) {
-        ScrollState ss = dm->GetScrollState();
-        y = (int)ss.y;
-        cur = ss.page;
-    }
-    return finish(fmt("OK page=%d y=%d", cur, y), 0);
 }
 
 // action: "get" | "r2l" | "presentation" | "fullscreen"
@@ -365,13 +245,9 @@ static TempStr SidebarLayoutResultTemp(int* exitCodeOut) {
 
     bool pref = gSettings && gSettings->sidebarOnRight;
     bool tocVis = win->hwndTocBox && HwndIsVisible(win->hwndTocBox);
-    bool favVis = win->hwndFavBox && HwndIsVisible(win->hwndFavBox);
     int tocX = clientX(win->hwndTocBox);
-    int favX = clientX(win->hwndFavBox);
     int canvasX = clientX(win->hwndCanvas);
-    return finish(fmt("OK pref=%d tocVis=%d favVis=%d tocX=%d favX=%d canvasX=%d", pref ? 1 : 0, tocVis ? 1 : 0,
-                      favVis ? 1 : 0, tocX, favX, canvasX),
-                  0);
+    return finish(fmt("OK pref=%d tocVis=%d tocX=%d canvasX=%d", pref ? 1 : 0, tocVis ? 1 : 0, tocX, canvasX), 0);
 }
 
 struct LayoutProbeState {
@@ -454,15 +330,11 @@ static TempStr LayoutInfoResultTemp(Str action, int* exitCodeOut) {
     AppendHwndLayoutRect(out, win, StrL("tabs"), win->tabsCtrl ? win->tabsCtrl->hwnd : nullptr);
     AppendHwndLayoutRect(out, win, StrL("menu"), win->hwndMenuReBar);
     AppendHwndLayoutRect(out, win, StrL("toc"), win->hwndTocBox);
-    AppendHwndLayoutRect(out, win, StrL("favorites"), win->hwndFavBox);
-    AppendHwndLayoutRect(out, win, StrL("aiChat"), win->hwndAiChatBox);
 
     AppendLayoutTree(out, StrL("chrome"), win->chromeLayout);
     AppendLayoutTree(out, StrL("frameLayout"), win->frameLayout);
     AppendLayoutTree(out, StrL("caption"), win->captionLayout);
     AppendLayoutTree(out, StrL("toc"), win->tocLayout);
-    AppendLayoutTree(out, StrL("favorites"), win->favLayout);
-    AppendLayoutTree(out, StrL("aiChat"), win->aiChatLayout);
     AppendLayoutTree(out, StrL("homeSearch"), win->homeSearchLayout);
 
     DisplayModel* dm = win->AsFixed();
@@ -841,15 +713,13 @@ enum class ControlCmd : u16 {
     TestWindowStateDuringLoad = 31,
     TestTocNavigate = 32,
     TestMarkdownTocNavigate = 33,
-    TestFavoriteNav = 34,
+    // IDs 34, 41, 42 unused (reserved on the -dbg-control wire protocol; do not renumber).
     TestToolbarButtons = 35,
     TestKeyboardLinkFollow = 36,
     TestFindResultsOrder = 37,
     TestClickClearsSelection = 38,
     TestRectSelectionDrag = 39,
     TestSelectTextKeyboard = 40,
-    TestAIChat = 41,
-    TestAIChatReplay = 42,
     TestMarkdownFollowLink = 43,
     TestHomeListRows = 44,
     TestPageComments = 45,
@@ -2163,20 +2033,6 @@ static void ExecuteControlRequest(ControlRequest* req) {
             break;
         }
 
-        case ControlCmd::TestFavoriteNav: {
-            Str action = StringArg(req, 0);
-            i32 pageNo = 0;
-            IntArg(req, 1, pageNo); // optional for next/prev/page
-            if (len(action) == 0) {
-                AppendError(req, StrL("TestFavoriteNav expects string action [, int pageNo]"));
-                break;
-            }
-            int exitCode = 0;
-            Str res = FavoriteNavResultTemp(action, pageNo, &exitCode);
-            AppendTestResult(req, exitCode, res);
-            break;
-        }
-
         case ControlCmd::TestToolbarButtons: {
             int exitCode = 0;
             Str res = ToolbarButtonsResultTemp(&exitCode);
@@ -2194,33 +2050,6 @@ static void ExecuteControlRequest(ControlRequest* req) {
         case ControlCmd::TestSelectTextKeyboard: {
             int exitCode = 0;
             Str res = SelectTextKeyboardResultTemp(&exitCode);
-            AppendTestResult(req, exitCode, res);
-            break;
-        }
-
-        case ControlCmd::TestAIChat: {
-            i32 backend = 0;
-            Str filePath = StringArg(req, 1);
-            Str message = StringArg(req, 2);
-            if (!IntArg(req, 0, backend) || len(filePath) == 0 || len(message) == 0) {
-                AppendError(req, StrL("TestAIChat expects int backend, string filePath, string message"));
-                break;
-            }
-            int exitCode = 0;
-            Str res = AIChatTestResultTemp(backend, filePath, message, &exitCode);
-            AppendTestResult(req, exitCode, res);
-            break;
-        }
-
-        case ControlCmd::TestAIChatReplay: {
-            Str userMsg = StringArg(req, 0);
-            Str response = StringArg(req, 1);
-            if (len(userMsg) == 0 || len(response) == 0) {
-                AppendError(req, StrL("TestAIChatReplay expects string userMsg, string response"));
-                break;
-            }
-            int exitCode = 0;
-            Str res = AIChatTestReplayResultTemp(userMsg, response, &exitCode);
             AppendTestResult(req, exitCode, res);
             break;
         }

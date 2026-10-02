@@ -27,12 +27,13 @@
 #include "gui/VirtCtrl.h"
 
 #include "Installer.h"
+#include "resource.h"
 
 // set to true to enable shadow effect
 constexpr bool kDrawTextShadow = true;
 constexpr bool kDrawMsgTextShadow = false;
 
-constexpr Color kInstallerWinBgColor = MkRgb(0xff, 0xf2, 0); // yellow
+constexpr Color kInstallerWinBgColor = MkRgb(0xff, 0xff, 0xff); // white
 
 constexpr DWORD kTenSecondsInMs = 10 * 1000;
 
@@ -697,10 +698,6 @@ void SetDefaultMsg() {
     SetMsg(gDefaultMsg, kColorMsgWelcome);
 }
 
-static void InvalidateFrame() {
-    HwndRepaintNow(gHwndFrame);
-}
-
 bool CheckInstallUninstallPossible(HWND hwnd, bool silent) {
     logf("CheckInstallUninstallPossible(silent=%d)\n", silent);
     KillProcessesUsingInstallation();
@@ -726,94 +723,6 @@ bool CheckInstallUninstallPossible(HWND hwnd, bool silent) {
     return possible;
 }
 
-// This display is inspired by http://letteringjs.com/
-typedef struct {
-    // part that doesn't change
-    char c;
-    Gdiplus::Color col, colShadow;
-    float rotation;
-    float dyOff; // displacement
-
-    // part calculated during layout
-    float dx, dy;
-    float x;
-} LetterInfo;
-
-// clang-format off
-static LetterInfo gLetters[] = {
-    {'S', gCol1, gCol1Shadow, -3.f, 0, 0, 0},
-    {'U', gCol2, gCol2Shadow, 0.f, 0, 0, 0},
-    {'M', gCol3, gCol3Shadow, 2.f, -2.f, 0, 0},
-    {'A', gCol4, gCol4Shadow, 0.f, -2.4f, 0, 0},
-    {'T', gCol5, gCol5Shadow, 0.f, 0, 0, 0},
-    {'R', gCol5, gCol5Shadow, 2.3f, -1.4f, 0, 0},
-    {'A', gCol4, gCol4Shadow, 0.f, 0, 0, 0},
-    {'P', gCol3, gCol3Shadow, 0.f, -2.3f, 0, 0},
-    {'D', gCol2, gCol2Shadow, 0.f, 3.f, 0, 0},
-    {'F', gCol1, gCol1Shadow, 0.f, 0, 0, 0}
-};
-// clang-format on
-
-constexpr int kSumatraLettersCount = dimofi(gLetters);
-
-static void SetLettersSumatraUpTo(size_t n) {
-    Str s = StrL("SUMATRAPDF");
-    for (size_t i = 0; i < kSumatraLettersCount; i++) {
-        char c = ' ';
-        if (i < n) {
-            c = s.s[i];
-        }
-        gLetters[i].c = c;
-    }
-}
-
-static void SetLettersSumatra() {
-    SetLettersSumatraUpTo(kSumatraLettersCount);
-}
-
-// an animation that reveals letters one by one
-
-// how long the animation lasts, in seconds
-constexpr double kRevealingAnimDur = 2;
-
-static FrameTimeoutCalculator* gRevealingLettersAnim = nullptr;
-
-static int gRevealingLettersAnimLettersToShow;
-
-static void RevealingLettersAnimStart() {
-    int framesPerSec = (int)(double(kSumatraLettersCount) / kRevealingAnimDur);
-    gRevealingLettersAnim = new FrameTimeoutCalculator(framesPerSec);
-    gRevealingLettersAnimLettersToShow = 0;
-    SetLettersSumatraUpTo(0);
-}
-
-static void RevealingLettersAnimStop() {
-    delete gRevealingLettersAnim;
-    gRevealingLettersAnim = nullptr;
-    SetLettersSumatra();
-    InvalidateFrame();
-}
-
-static void RevealingLettersAnim() {
-    if (gRevealingLettersAnim->ElapsedTotal() > kRevealingAnimDur) {
-        RevealingLettersAnimStop();
-        return;
-    }
-    DWORD timeOut = gRevealingLettersAnim->GetTimeoutInMilliseconds();
-    if (timeOut != 0) {
-        return;
-    }
-    SetLettersSumatraUpTo(++gRevealingLettersAnimLettersToShow);
-    gRevealingLettersAnim->Step();
-    InvalidateFrame();
-}
-
-void AnimStep() {
-    if (gRevealingLettersAnim) {
-        RevealingLettersAnim();
-    }
-}
-
 // GDI+ Font(name, emSize) defaults to UnitPoint and converts with the Graphics
 // DPI. The installer window is already DpiScale'd; on Windows 7 GDI+ may still
 // use the real screen DPI while the process is 96-DPI virtualized, so the logo
@@ -822,35 +731,41 @@ static float ImpactPx(int sizePt) {
     return (float)DpiGet() * (float)sizePt / 72.f;
 }
 
-static void CalcLettersLayout(Graphics& g, Font* f, int dx) {
-    static int laidOutDx = 0;
-    if (laidOutDx == dx) {
-        return;
+static Gdiplus::Image* GetMithenLogoImage() {
+    static Gdiplus::Image* logo = nullptr;
+    if (logo) {
+        return logo;
     }
-    laidOutDx = dx;
+    LoadedDataResource res;
+    bool ok = LockDataResource(IDB_MITHEN_LOGO, &res, nullptr);
+    if (!ok || !res.data || res.dataSize <= 0) {
+        return nullptr;
+    }
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, res.dataSize);
+    if (!hMem) {
+        return nullptr;
+    }
+    void* pMem = GlobalLock(hMem);
+    memcpy(pMem, res.data, (size_t)res.dataSize);
+    GlobalUnlock(hMem);
+    IStream* stream = nullptr;
+    if (SUCCEEDED(CreateStreamOnHGlobal(hMem, TRUE, &stream)) && stream) {
+        logo = Gdiplus::Image::FromStream(stream);
+        stream->Release();
+    }
+    return logo;
+}
 
-    StringFormat sfmt;
-    const float letterSpacing = -(float)DpiScale(12);
-    float totalDx = -letterSpacing; // counter last iteration of the loop
-    WCHAR s[2]{};
-    Gdiplus::PointF origin(0.f, 0.f);
-    Gdiplus::RectF bbox;
-    for (LetterInfo& li : gLetters) {
-        s[0] = li.c;
-        g.MeasureString(s, 1, f, origin, &sfmt, &bbox);
-        li.dx = bbox.Width;
-        li.dy = bbox.Height;
-        totalDx += li.dx;
-        totalDx += letterSpacing;
+static float DrawMithenLogo(Graphics& g, float y, int dx, float dyMax) {
+    Gdiplus::Image* logo = GetMithenLogoImage();
+    if (!logo) {
+        return 0;
     }
-
-    float x = ((float)dx - totalDx) / 2.f;
-    for (LetterInfo& li : gLetters) {
-        li.x = x;
-        x += li.dx;
-        x += letterSpacing;
-    }
-    RevealingLettersAnimStart();
+    float h = (float)DpiScale(68);
+    float w = h * (float)logo->GetWidth() / (float)logo->GetHeight();
+    float x = ((float)dx - w) / 2.f;
+    g.DrawImage(logo, x, y, w, h);
+    return h;
 }
 
 static float DrawMessage(Graphics& g, Str msg, float y, float dx, Gdiplus::Color color) {
@@ -883,54 +798,39 @@ static float DrawMessage(Graphics& g, Str msg, float y, float dx, Gdiplus::Color
     return bbox.Height;
 }
 
-static void DrawSumatraLetters(Graphics& g, Font* f, Font* fVer, float y) {
-    WCHAR s[2]{};
-    for (const LetterInfo& li : gLetters) {
-        s[0] = li.c;
-        if (s[0] == ' ') {
-            return;
-        }
+void AnimStep() {
+    // the logo is a static image; nothing to animate
+}
 
-        g.RotateTransform(li.rotation, MatrixOrderAppend);
-        float dyOff = li.dyOff * (float)DpiGet() / 96.f;
-        if (kDrawTextShadow) {
-            // draw shadow first
-            SolidBrush b2(li.colShadow);
-            Gdiplus::PointF o2(li.x - (float)DpiScale(3), y + (float)DpiScale(4) + dyOff);
-            g.DrawString(s, 1, f, o2, &b2);
-        }
-
-        SolidBrush b1(li.col);
-        Gdiplus::PointF o1(li.x, y + dyOff);
-        g.DrawString(s, 1, f, o1, &b1);
-        g.RotateTransform(li.rotation, MatrixOrderAppend);
-        g.ResetTransform();
-    }
-
-    // draw version number
-    float x = gLetters[dimof(gLetters) - 1].x;
-    g.TranslateTransform(x, y);
-    g.RotateTransform(45.f);
-    float x2 = (float)DpiScale(15);
-    float y2 = -(float)DpiScale(34);
-
+static void DrawLogoAndVersion(Graphics& g, float y, int dx) {
     const WCHAR* ver_s = L"v" CURR_VERSION_STR;
-    if (kDrawTextShadow) {
-        SolidBrush b1(Gdiplus::Color(0, 0, 0));
-        g.DrawString(ver_s, -1, fVer, Gdiplus::PointF(x2 - (float)DpiScale(2), y2 - (float)DpiScale(1)), &b1);
+    float logoH = DrawMithenLogo(g, y, dx, 0);
+    if (logoH > 0) {
+        y += logoH + (float)DpiScale(2);
     }
-    SolidBrush b2(Gdiplus::Color(0xff, 0xff, 0xff));
-    g.DrawString(ver_s, -1, fVer, Gdiplus::PointF(x2, y2), &b2);
-    g.ResetTransform();
+    if (!logoH || y + (float)DpiScale(20) > (float)DpiScale(120)) {
+        Font f(L"Impact", ImpactPx(40), FontStyleRegular, UnitPixel);
+        Gdiplus::RectF maxbox(0, y, (float)dx, 0);
+        Gdiplus::RectF bbox;
+        g.MeasureString(ver_s, -1, &f, maxbox, &bbox);
+        bbox.X += ((float)dx - bbox.Width) / 2.f;
+        if (kDrawTextShadow) {
+            bbox.X--;
+            bbox.Y++;
+            SolidBrush b1(Gdiplus::Color(0xff, 0xff, 0xff));
+            g.DrawString(ver_s, -1, &f, Gdiplus::PointF(bbox.X, bbox.Y), &b1);
+            bbox.X++;
+            bbox.Y--;
+        }
+        SolidBrush b2(Gdiplus::Color(0, 0, 0));
+        g.DrawString(ver_s, -1, &f, Gdiplus::PointF(bbox.X, bbox.Y), &b2);
+    }
 }
 
 static void DrawFrame2(Graphics& g, Rect r, bool skipMessage) {
     g.SetCompositingQuality(CompositingQualityHighQuality);
     g.SetSmoothingMode(SmoothingModeAntiAlias);
     g.SetPageUnit(Gdiplus::UnitPixel);
-
-    Font f(L"Impact", ImpactPx(40), FontStyleRegular, UnitPixel);
-    CalcLettersLayout(g, &f, r.dx);
 
     Gdiplus::Color bgCol;
     bgCol.SetFromCOLORREF(kInstallerWinBgColor);
@@ -939,8 +839,7 @@ static void DrawFrame2(Graphics& g, Rect r, bool skipMessage) {
     r2.Inflate(1, 1);
     g.FillRectangle(&bgBrush, r2);
 
-    Font f2(L"Impact", ImpactPx(16), FontStyleRegular, UnitPixel);
-    DrawSumatraLetters(g, &f, &f2, (float)DpiScale(18));
+    DrawLogoAndVersion(g, (float)DpiScale(18), r.dx);
 
     if (skipMessage) {
         return;

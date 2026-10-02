@@ -1410,8 +1410,6 @@
     <ClInclude Include="..\ext\darkmodelib\src\StdAfx.h" />
     <ClInclude Include="..\ext\darkmodelib\src\UAHMenuBar.h" />
     <ClInclude Include="..\ext\darkmodelib\src\Version.h" />
-    <ClInclude Include="..\src\AIChatCommon.h" />
-    <ClInclude Include="..\src\AIChatPanel.h" />
     <ClInclude Include="..\src\Accelerators.h" />
     <ClInclude Include="..\src\AnnotEditToolbar.h" />
     <ClInclude Include="..\src\AnnotFilterToolbar.h" />
@@ -1448,8 +1446,8 @@
     <ClInclude Include="..\src\EutlTrust.h" />
     <ClInclude Include="..\src\ExifDump.h" />
     <ClInclude Include="..\src\ExplorerQuickLook.h" />
+    <ClInclude Include="..\src\ExplorerSort.h" />
     <ClInclude Include="..\src\ExternalViewers.h" />
-    <ClInclude Include="..\src\Favorites.h" />
     <ClInclude Include="..\src\FileHistory.h" />
     <ClInclude Include="..\src\FileThumbnails.h" />
     <ClInclude Include="..\src\FilterHighlightDraw.h" />
@@ -1511,7 +1509,6 @@
     <ClInclude Include="..\src\SelectionTranslate.h" />
     <ClInclude Include="..\src\Settings.h" />
     <ClInclude Include="..\src\ShortcutParse.h" />
-    <ClInclude Include="..\src\SimpleBrowserWindow.h" />
     <ClInclude Include="..\src\StressTesting.h" />
     <ClInclude Include="..\src\SumatraControl.h" />
     <ClInclude Include="..\src\SumatraDialogs.h" />
@@ -1527,7 +1524,6 @@
     <ClInclude Include="..\src\Theme.h" />
     <ClInclude Include="..\src\Toolbar.h" />
     <ClInclude Include="..\src\Translations.h" />
-    <ClInclude Include="..\src\UpdateCheck.h" />
     <ClInclude Include="..\src\Version.h" />
     <ClInclude Include="..\src\WebpReader.h" />
     <ClInclude Include="..\src\WindowTab.h" />
@@ -1599,14 +1595,7 @@
     <ClCompile Include="..\ext\webview2\WebView2Loader.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\src\AIAntiGravity.cpp" />
-    <ClCompile Include="..\src\AIChatCommon.cpp" />
-    <ClCompile Include="..\src\AIChatPanel.cpp" />
-    <ClCompile Include="..\src\AIClaudeCode.cpp" />
-    <ClCompile Include="..\src\AICodexBuild.cpp" />
-    <ClCompile Include="..\src\AIGrokBuild.cpp" />
     <ClCompile Include="..\src\Accelerators.cpp" />
-    <ClCompile Include="..\src\AddFavoriteDialog.cpp" />
     <ClCompile Include="..\src\AdvancedSettingsDialog.cpp" />
     <ClCompile Include="..\src\AnnotEditToolbar.cpp" />
     <ClCompile Include="..\src\AnnotFilterToolbar.cpp" />
@@ -1624,7 +1613,6 @@
     <ClCompile Include="..\src\Canvas.cpp" />
     <ClCompile Include="..\src\CanvasAboutUI.cpp" />
     <ClCompile Include="..\src\ChangeColorDialog.cpp" />
-    <ClCompile Include="..\src\ChangeLanguageDialog.cpp" />
     <ClCompile Include="..\src\ChangeScrollbarDialog.cpp" />
     <ClCompile Include="..\src\ChangeThemeDialog.cpp" />
     <ClCompile Include="..\src\ChapterTable.cpp" />
@@ -1664,8 +1652,8 @@
     <ClCompile Include="..\src\EutlTrust.cpp" />
     <ClCompile Include="..\src\ExifDump.cpp" />
     <ClCompile Include="..\src\ExplorerQuickLook.cpp" />
+    <ClCompile Include="..\src\ExplorerSort.cpp" />
     <ClCompile Include="..\src\ExternalViewers.cpp" />
-    <ClCompile Include="..\src\Favorites.cpp" />
     <ClCompile Include="..\src\FileHistory.cpp" />
     <ClCompile Include="..\src\FileThumbnails.cpp" />
     <ClCompile Include="..\src\FilterHighlightDraw.cpp" />
@@ -1754,7 +1742,6 @@
     <ClCompile Include="..\src\SettingsDialog.cpp" />
     <ClCompile Include="..\src\ShortcutParse.cpp" />
     <ClCompile Include="..\src\SignDocumentDialog.cpp" />
-    <ClCompile Include="..\src\SimpleBrowserWindow.cpp" />
     <ClCompile Include="..\src\StressTesting.cpp" />
     <ClCompile Include="..\src\SumatraConfig.cpp" />
     <ClCompile Include="..\src\SumatraControl.cpp" />
@@ -1811,7 +1798,6 @@
     <ClCompile Include="..\src\TranslationLangs.cpp" />
     <ClCompile Include="..\src\Translations.cpp" />
     <ClCompile Include="..\src\Uninstaller.cpp" />
-    <ClCompile Include="..\src\UpdateCheck.cpp" />
     <ClCompile Include="..\src\WebpReader.cpp" />
     <ClCompile Include="..\src\WindowTab.cpp" />
     <ClCompile Include="..\src\base\Archive.cpp">

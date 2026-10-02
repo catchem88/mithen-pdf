@@ -38,6 +38,10 @@ struct InstallerFlags {
     bool withFilter = false;
     bool withPreview = false;
     bool noDesktopShortcut = false;
+    // default is to reset settings when installing over an old installation;
+    // -no-reset-settings opts out
+    bool noResetSettings = false;
+    bool withResetSettings = false;
     bool justExtractFiles = false;
     bool allUsers = false;
     bool runInstallNow = false;

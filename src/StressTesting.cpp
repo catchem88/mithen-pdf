@@ -631,8 +631,8 @@ static bool OpenFile(StressTest* st, Str fileName) {
     ctrl->SetDisplayMode(DisplayMode::Continuous);
     ctrl->SetZoomVirtual(kZoomFitPage, nullptr);
     ctrl->GoToFirstPage();
-    if (st->win->uiState.tocVisible || gSettings->showFavorites) {
-        SetSidebarVisibility(st->win, st->win->uiState.tocVisible, gSettings->showFavorites);
+    if (st->win->uiState.tocVisible) {
+        SetSidebarVisibility(st->win, st->win->uiState.tocVisible);
     }
 
     st->maxPagesForFile = kStressTestMaxPagesPerFile;

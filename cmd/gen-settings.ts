@@ -610,64 +610,6 @@ const htmlUI: Field[] = [
   ),
 ];
 
-const codexBuild: Field[] = [
-  field("Model", Str, "gpt-5.5", "Codex model ID for -m (e.g. gpt-5.5, gpt-5.4, o3)"),
-  field(
-    "Models",
-    Str,
-    "",
-    "extra Codex model IDs for the dropdown, comma-separated; used in addition to models reported by Codex",
-  ),
-  field("Sandbox", Int, 1, "Codex sandbox mode: 0=read-only, 1=workspace-write, 2=danger-full-access"),
-  field("SkipSandbox", Bool, false, "if true, pass --dangerously-bypass-approvals-and-sandbox to Codex"),
-  field("BgColor", Color, "#ffffff", "background color of the OpenAI Codex chat panel"),
-];
-
-const grokBuild: Field[] = [
-  field("Model", Str, "grok-4.5", "Grok model ID for --model (e.g. grok-4.5)"),
-  field(
-    "Models",
-    Str,
-    "",
-    "extra Grok model IDs for the dropdown, comma-separated; used in addition to models reported by Grok",
-  ),
-  field("Effort", Int, 1, "Grok effort level: 0=Low, 1=Medium, 2=High, 3=XHigh, 4=Max"),
-  field("AlwaysApprove", Bool, false, "if true, pass --always-approve to Grok Build (auto-approve tool executions)"),
-  field("BgColor", Color, "#ffffff", "background color of the Grok Build chat panel"),
-];
-
-const claudeCode: Field[] = [
-  field(
-    "Model",
-    Str,
-    "sonnet",
-    "Claude model alias for --model (e.g. sonnet, opus, haiku); uses opus if not in the model list",
-  ),
-  field(
-    "Models",
-    Str,
-    "",
-    "extra Claude model aliases for the dropdown, comma-separated; documented Claude Code aliases are always included",
-  ),
-  field("Effort", Int, 1, "Claude effort level: 0=Low, 1=Medium, 2=High, 3=Max"),
-  field("SkipPermissions", Bool, false, "if true, pass --dangerously-skip-permissions to Claude Code"),
-  field("BgColor", Color, "#ffffff", "background color of the Claude Code chat panel"),
-];
-
-const antiGravity: Field[] = [
-  field("Model", Str, "gemini-3.8-flash-medium", "Antigravity model ID for --model (e.g. gemini-3.8-flash-medium)"),
-  field("Models", Str, "", "extra Antigravity model IDs for the dropdown, comma-separated"),
-  field("Effort", Int, 1, "Antigravity effort level: 0=Low, 1=Medium, 2=High, 3=Max"),
-  field(
-    "AutoApprove",
-    Bool,
-    true,
-    "if true, pass --dangerously-skip-permissions to Antigravity CLI so it can read the current file " +
-      "etc. in headless print mode (agy cannot prompt for permissions with -p)",
-  ),
-  field("BgColor", Color, "#ffffff", "background color of the Antigravity chat panel"),
-];
-
 const readingBar: Field[] = [
   field(
     "Background",
@@ -1035,7 +977,6 @@ const fileEBookUI: Field[] = [
 
 const fileState: Field[] = [
   field("FilePath", Str, null, "path of the document"),
-  array("Favorites", favorite, "pages of this document bookmarked in the Favorites menu"),
   field(
     "IsPinned",
     Bool,
@@ -1163,7 +1104,6 @@ const fileState: Field[] = [
 // Keep the frequently repeated FileState instances compact: pointers and
 // strings first, followed by scalar values and finally the bools.
 const fileStateLayout = [
-  "Favorites",
   "EBookUI",
   "TocState",
   "Thumbnail",
@@ -1284,8 +1224,8 @@ const globalPrefs: Field[] = [
   field(
     "EscToExit",
     Bool,
-    false,
-    "if true, Esc key closes SumatraPDF. In presentation or fullscreen mode, Esc leaves that mode first",
+    true,
+    "if true, Esc key closes MithenPDF. In presentation or fullscreen mode, Esc leaves that mode first",
   ),
   field("FullPathInTitle", Bool, false, "if true, show the full path to the document in the title bar").ver("3.0"),
   field("InverseSearchCmdLine", Str, null, "pattern used to launch the LaTeX editor when doing inverse search"),
@@ -1303,7 +1243,7 @@ const globalPrefs: Field[] = [
       'Light theme; the default #80fff200 is a marker meaning "use the theme\'s color", so setting ' +
       "any other value also colorizes the toolbar and sidebars",
   ),
-  field("NoHomeTab", Bool, false, "if true, doesn't open Home tab"),
+  field("NoHomeTab", Bool, true, "if true, doesn't open Home tab"),
   field(
     "HomePageSortByFrequentlyRead",
     Bool,
@@ -1350,15 +1290,15 @@ const globalPrefs: Field[] = [
   field(
     "RememberOpenedFiles",
     Bool,
-    true,
+    false,
     "if true, keep a history of opened documents and their display settings " +
-      "(FileStates); closing a document doesn't remove it from the history. " +
-      "Also required for saving SessionData",
+      "(MithenPDF defaults to false: opening a file leaves no trace)",
+    "(FileStates); closing a document doesn't remove it from the history. " + "Also required for saving SessionData",
   ),
   field(
     "RememberStatePerDocument",
     Bool,
-    true,
+    false,
     "if true, store display settings for each document separately (i.e. everything " +
       "after UseDefaultState in FileStates)",
   ),
@@ -1435,14 +1375,6 @@ const globalPrefs: Field[] = [
     false,
     "if true, the find UI is a floating, movable window with a results list " +
       "instead of the compact toolbar overlay",
-  ).ver("3.7"),
-  field("ShowFavorites", Bool, false, "if true, show the Favorites sidebar"),
-  field(
-    "SortFavoritesByName",
-    Bool,
-    false,
-    "if true, favorites within each file are sorted alphabetically by name " +
-      "(or page label); if false (the default), they are sorted by page number",
   ).ver("3.7"),
   field("ShowToc", Bool, true, "if true, show the table of contents (Bookmarks) sidebar when the document has one"),
   field(
@@ -1561,7 +1493,7 @@ const globalPrefs: Field[] = [
     false,
     "if true, a PDF without an outline gets a table of contents built from numbered headings in its text (Generate Table Of Contents command does it on demand)",
   ).ver("3.7"),
-  field("ShowStartPage", Bool, true, "if true, show a list of frequently read documents when no document is loaded"),
+  field("ShowStartPage", Bool, false, "if true, show a list of frequently read documents when no document is loaded"),
   field(
     "SidebarDx",
     Int,
@@ -1665,7 +1597,7 @@ const globalPrefs: Field[] = [
   field(
     "Theme",
     Str,
-    "Light",
+    "Charcoal",
     "the name of the theme to use. System follows the Windows light/dark app mode " +
       "and switches between LastLightTheme and LastDarkTheme. Built-in themes: " +
       "Light, Dark, Light Warm, Dark from 3.5, Charcoal, Solarized Light, " +
@@ -1784,7 +1716,7 @@ const globalPrefs: Field[] = [
     false,
     "if true, use the Windows system colors for the document background and text. Overrides other color settings",
   ),
-  field("UseTabs", Bool, true, "if true, documents are opened in tabs instead of new windows").ver("3.0"),
+  field("UseTabs", Bool, false, "if true, documents are opened in tabs instead of new windows").ver("3.0"),
   field(
     "SelectionToolbar",
     Bool,
@@ -1861,23 +1793,6 @@ const globalPrefs: Field[] = [
     "customization options for HTML UI. If UseFixedPageUI is true, MuPDF is used; otherwise WebView2 browser view is used when available",
   ).ver("3.7"),
   emptyLine(),
-  struct("ClaudeCode", claudeCode, "settings for the Claude Code chat sidebar").ver("3.7"),
-  emptyLine(),
-  struct("GrokBuild", grokBuild, "settings for the Grok Build chat sidebar").ver("3.7"),
-  emptyLine(),
-  struct("CodexBuild", codexBuild, "settings for the OpenAI Codex chat sidebar").ver("3.7"),
-  emptyLine(),
-  struct("AntiGravity", antiGravity, "settings for the Antigravity chat sidebar").ver("3.7"),
-  emptyLine(),
-  field(
-    "AIChatSidebarDx",
-    Int,
-    0,
-    "width of the AI chat sidebar (0 = use default); shared by Claude Code, Grok Build, and OpenAI Codex (internal)",
-  )
-    .internal()
-    .ver("3.7"),
-  emptyLine(),
   field(
     "TranslateToLang",
     Str,
@@ -1889,14 +1804,7 @@ const globalPrefs: Field[] = [
   field("TranslateFromLang", Str, "", "remembered source language for selection translation; empty means Auto")
     .internal()
     .ver("3.7"),
-  field(
-    "TranslateEngine",
-    Str,
-    "",
-    "remembered engine for Translate Selection: Google, DeepL, Grok Build, Claude Code, OpenAI Codex or Antigravity",
-  )
-    .internal()
-    .ver("3.7"),
+  field("TranslateEngine", Str, "", "remembered engine for Translate Selection: Google or DeepL").internal().ver("3.7"),
   emptyLine(),
   struct("Annotations", annotations, "default values for annotations in PDF documents").ver("3.3"),
   emptyLine(),
@@ -1994,16 +1902,13 @@ const globalPrefs: Field[] = [
   )
     .ver("3.0")
     .doc("data required for reloading documents after an auto-update"),
-  compactStruct("TimeOfLastUpdateCheck", fileTime, "timestamp of the last update check")
+  compactStruct("LastPrefUpdate", fileTime, "modification time of the preferences file when it was last read")
     .structName("FILETIME")
-    .doc("data required to determine when SumatraPDF last checked for updates"),
+    .notSaved(),
 
   field("OpenCountWeek", Int, 0, 'week count since 2011-01-01 needed to "age" openCount values in file history').doc(
     "value required to determine recency for the OpenCount value in FileStates",
   ),
-  compactStruct("LastPrefUpdate", fileTime, "modification time of the preferences file when it was last read")
-    .structName("FILETIME")
-    .notSaved(),
   field(
     "DefaultDisplayModeEnum",
     { name: "", ctype: "DisplayMode" },
@@ -2012,9 +1917,6 @@ const globalPrefs: Field[] = [
   ).notSaved(),
   field("DefaultZoomFloat", Float, -1, "value of DefaultZoom for internal usage").notSaved(),
   compactStruct("PropWinPos", pointPos, "position of the document properties window").structName("Point"),
-  // saved & honored, but hidden from the advanced settings dialog (edited via
-  // the "Automatically check for updates" checkbox in Options instead)
-  field("CheckForUpdates", Bool, true, "if true, check once a day whether an update is available").internal(),
   emptyLine(),
   comment("Settings below are not recognized by the current version"),
 ];
@@ -2088,7 +1990,6 @@ const globalPrefsLayout = [
   "OpenCountWeek",
   "DefaultDisplayModeEnum",
   "DefaultZoomFloat",
-  "TimeOfLastUpdateCheck",
   "LastPrefUpdate",
   "PropWinPos",
   "WindowPos",

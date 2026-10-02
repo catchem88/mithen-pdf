@@ -42,3 +42,13 @@ tests/tmp/
 /mcps/tasks/tools
 /bin/resvg.exe
 /scratch.txt
+
+# local tooling, editors and build artifacts
+.vscode
+.code-workspace
+*.code-workspace
+.ai/
+.qm/
+.kilo/
+.commandcode/
+res/*

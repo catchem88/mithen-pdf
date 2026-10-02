@@ -148,8 +148,7 @@ void UpdateTabWidth(MainWindow* win) {
     int nTabs = win->TabCount();
     // Hide a lone Home tab. Keeping its tab bar open after the last document
     // closed fought RelayoutCaption and caused a continuous repaint storm
-    // (issue #5861). Favorites is a closable tab, so it must remain visible
-    // even when it is the only tab left.
+    // (issue #5861).
     bool onlyHomeTab = nTabs == 1 && win->GetTab(0)->IsAboutTab();
     bool showSingleTab = SettingsUseTabs() || win->tabsInTitlebar;
     bool showTabs = !onlyHomeTab && ((nTabs > 1) || (showSingleTab && (nTabs > 0)));
@@ -253,7 +252,7 @@ static void CloseWindowIfNoDocuments(MainWindow* win) {
 static void MaybeMigrateTab(WindowTab* tab, MainWindow* newWin, Point releasePt) {
     MainWindow* oldWin = tab->win;
 
-    // Home / Favorites tabs stay in their window
+    // non-document tabs stay in their window
     if (tab->IsNonDocumentTab()) {
         return;
     }
@@ -361,7 +360,7 @@ void TabsSelect(MainWindow* win, int tabIndex) {
 }
 
 // clang-format off
-extern bool SaveAnnotationsToExistingFile(WindowTab*);
+extern bool SaveAnnotationsToExistingFile(WindowTab*, bool reload = true);
 extern bool SaveAnnotationsToMaybeNewPdfFile(WindowTab*);
 
 static MenuDef menuDefContextTab[] = {
@@ -697,9 +696,8 @@ void CreateTabbar(MainWindow* win) {
 // verifies that WindowTab state is consistent with MainWindow state
 static NO_INLINE void VerifyWindowTab(MainWindow* win, WindowTab* tdata) {
     ReportIf(tdata->ctrl != win->ctrl);
-    // Home / Favorites tabs have no document controller. Favorites layout
-    // intentionally leaves canvas geometry alone (hidden), so canvasRc is not
-    // kept in lockstep with win->canvasRc the way document tabs are.
+    // Home tabs have no document controller, so canvasRc is not kept in
+    // lockstep with win->canvasRc the way document tabs are.
     if (tdata->IsNonDocumentTab()) {
         return;
     }

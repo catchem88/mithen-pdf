@@ -68,7 +68,7 @@ void ApplyExplorerQuickLookChrome(MainWindow* win) {
     HwndMoveWindow(hwnd, &r);
     SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     ShowOrHideToolbar(win);
-    SetSidebarVisibility(win, false, false);
+    SetSidebarVisibility(win, false);
     win->tabsVisible = false;
     ScheduleUiUpdate(win);
 }

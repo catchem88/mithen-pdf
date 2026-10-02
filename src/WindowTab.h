@@ -21,13 +21,6 @@ struct ReadingBarTab {
     float yFrac = 0.40f;
 };
 
-// per-tab state of one AI chat provider (see AIChatPanel.cpp)
-struct AIChatTabState {
-    Str sessionId;
-    str::Builder chatLog;
-    HANDLE process = nullptr;
-};
-
 /* Data related to a single document loaded into a tab/window */
 /* (none of these depend on MainWindow, so that a WindowTab could
    be moved between windows once this is supported) */
@@ -42,7 +35,6 @@ struct WindowTab {
         None,
         About,
         Document,
-        Favorites, // full-window favorites list (CmdFavoriteShowInTab)
     };
     MainWindow* win = nullptr;
     DocController* ctrl = nullptr;
@@ -78,9 +70,6 @@ struct WindowTab {
     // an array of ids for ToC items that have been expanded/collapsed by user
     Vec<int> tocState;
     Str readAloudText;
-    // per-provider AI chat state, indexed by AIChatBackend
-    // (0 = Claude, 1 = Grok, 2 = Codex, 3 = AntiGravity)
-    AIChatTabState aiChat[4];
     Type type = Type::None;
     LoadState loadState = LoadState::None;
     // previous View settings, needed when unchecking the Fit Width/Page toolbar buttons
@@ -91,9 +80,6 @@ struct WindowTab {
     // per-document tab color from FileState; kColorUnset = use default
     Color tabColor = kColorUnset;
 
-    // which AI chat sidebar is open for this tab
-    // (-1 = none; 0 = Claude, 1 = Grok, 2 = Codex, 3 = AntiGravity)
-    int aiChatPanelOpen = -1;
     int readAloudResumePos = -1;
     // utf8 offset in the highlight map where readAloudText[0] maps to
     int readAloudHighlightBase = 0;
@@ -120,7 +106,7 @@ struct WindowTab {
     bool showTocPresentation = false;
     // whether to auto-reload the document when the tab is selected
     bool reloadOnFocus = false;
-    // opened via CmdOpenFileNoHistory: do not write File History / Windows Recent
+    // do not write File History / Windows Recent (CmdOpenFileNoHistory)
     bool skipHistory = false;
 
     // TODO: terrible hack
@@ -148,7 +134,6 @@ struct WindowTab {
     ~WindowTab();
 
     bool IsAboutTab() const;
-    bool IsFavoritesTab() const;
     bool IsNonDocumentTab() const;
 
     DisplayModel* AsFixed() const;

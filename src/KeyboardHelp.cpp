@@ -53,7 +53,7 @@ static const int kSecFind[] = {
 };
 static const int kSecTabs[] = {
     CmdNextTabSmart, CmdNextTab, CmdPrevTab,
-    CmdMoveTabLeft, CmdMoveTabRight, CmdReopenLastClosedFile, 0,
+    CmdMoveTabLeft, CmdMoveTabRight, 0,
 };
 static const int kSecAnnot[] = {
     CmdCreateAnnotHighlight, CmdCreateAnnotUnderline, CmdSaveAnnotations,
@@ -61,8 +61,7 @@ static const int kSecAnnot[] = {
 };
 static const int kSecIface[] = {
     CmdCommandPalette, CmdToggleBookmarks, CmdToggleToolbar, CmdToggleMenuBar,
-    CmdToggleCursorPosition, CmdTogglePageInfo,
-    CmdFavoriteAdd, CmdFavoriteToggle, CmdHelpOpenManual,0,
+    CmdToggleCursorPosition, CmdTogglePageInfo, 0,
 };
 // clang-format on
 
@@ -113,11 +112,11 @@ static const struct {
     {CmdFindPrev, "Shift + F3"}, {CmdSelectAll, "Ctrl + A"}, {CmdCopySelection, "Ctrl + C"},
     {CmdSelectTextViaKeyboard, "F7"}, {CmdToggleKeyboardLinkFollowing, "Shift + F"}, {CmdNextTabSmart, "Ctrl + Tab"},
     {CmdNextTab, "Ctrl + Page Down"}, {CmdPrevTab, "Ctrl + Page Up"}, {CmdMoveTabLeft, "Ctrl + Shift + Page Up"},
-    {CmdMoveTabRight, "Ctrl + Shift + Page Down"}, {CmdReopenLastClosedFile, "Ctrl + Shift + T"},
+    {CmdMoveTabRight, "Ctrl + Shift + Page Down"},
     {CmdCreateAnnotHighlight, "A"}, {CmdCreateAnnotUnderline, "U"}, {CmdSaveAnnotations, "Ctrl + Shift + S"},
     {CmdDeleteAnnotation, "Ctrl + Delete"}, {CmdToggleBookmarks, "F12"}, {CmdToggleToolbar, "F8"},
     {CmdToggleMenuBar, "F9"}, {CmdToggleCursorPosition, "M"}, {CmdTogglePageInfo, "I"}, {CmdCommandPalette, "Ctrl + K"},
-    {CmdFavoriteAdd, "Ctrl + B"}, {CmdHelpOpenManual, "F1"}, {CmdToggleKeyboardHelp, "?"},
+    {CmdToggleKeyboardHelp, "?"},
 };
 // clang-format on
 

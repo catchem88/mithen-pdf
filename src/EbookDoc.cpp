@@ -88,10 +88,7 @@ static uint GetCodepageFromPI(Str xmlPI) {
         Str namePart;
         uint codePage;
     } static encodings[] = {
-        {StrL("UTF"), CP_UTF8},
-        {StrL("utf"), CP_UTF8},
-        {StrL("1252"), 1252},
-        {StrL("1251"), 1251},
+        {StrL("UTF"), CP_UTF8}, {StrL("utf"), CP_UTF8}, {StrL("1252"), 1252}, {StrL("1251"), 1251},
         // TODO: any other commonly used codepages?
     };
     for (auto& enc : encodings) {

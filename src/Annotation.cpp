@@ -735,6 +735,21 @@ bool SetWidgetTextValue(Annotation* annot, Str value) {
             logf("SetWidgetTextValue(): mupdf calls failed\n");
         }
     }
+    if (!ok) {
+        // the field's keystroke / validate script rejected the value (e.g. a
+        // date field with its own format). The caller already picked a value
+        // on purpose, so write it without running the field's scripts
+        auto* ctx = e->BaseCtx();
+        AutoUnlockRecursiveMutex cs(&e->docLock);
+        fz_try(ctx) {
+            ok = pdf_set_annot_field_value(ctx, e->pdfdoc, a, len(valueZ) == 0 ? "" : valueZ.s, 1) != 0;
+            pdf_update_annot(ctx, a);
+        }
+        fz_catch(ctx) {
+            fz_report_error(ctx);
+            logf("SetWidgetTextValue(): forced write failed\n");
+        }
+    }
     if (ok) {
         MarkNotificationAsModified(e, annot);
     }

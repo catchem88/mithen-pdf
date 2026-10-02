@@ -15,11 +15,11 @@ BEGIN
     //language ID = U.S. English, char set = Windows, Multilingual
 
     BEGIN
-      VALUE "FileDescription",  "SumatraPDF IFilter Search Helper"
+      VALUE "FileDescription",  "MithenPDF IFilter Search Helper"
       VALUE "FileVersion",      VER_RESOURCE_STR
       VALUE "LegalCopyright",   kCopyrightStr
       VALUE "OriginalFilename", "PdfFilter.dll"
-      VALUE "ProductName",      "SumatraPDF"
+      VALUE "ProductName",      "MithenPDF"
       VALUE "ProductVersion",   VER_RESOURCE_STR
     END
   END

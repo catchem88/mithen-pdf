@@ -61,7 +61,6 @@ struct InstallerWnd {
     HWND hwnd = nullptr;
 
     HBRUSH hbrBackground = nullptr;
-    Button* btnOptions = nullptr;
     Button* btnRunSumatra = nullptr;
     // the only virtual control of this window, painted by us on top of the
     // frame we draw ourselves
@@ -73,6 +72,7 @@ struct InstallerWnd {
     Checkbox* checkboxRegisterSearchFilter = nullptr;
     Checkbox* checkboxRegisterPreview = nullptr;
     Checkbox* checkboxDesktopShortcut = nullptr;
+    Checkbox* checkboxResetSettings = nullptr;
     int currProgress = 0;
     Progress* progressBar = nullptr;
     Button* btnExit = nullptr;
@@ -80,7 +80,6 @@ struct InstallerWnd {
 
     ILayout* layout = nullptr;
     ILayout* optionsBox = nullptr;
-    HwndSlot* optionsBtnSlot = nullptr;
 
     bool showOptions = false;
     ThreadHandle hThread = nullptr;
@@ -1092,6 +1091,45 @@ static bool CopySelfToDir(Str destDir) {
     return false;
 }
 
+// old settings live under both app names in both APPDATA and LOCALAPPDATA
+static void GetSettingsFilePaths(StrVec& out) {
+    TempStr localDir = GetSpecialFolderTemp(CSIDL_LOCAL_APPDATA, false);
+    TempStr appDir = GetSpecialFolderTemp(CSIDL_APPDATA, false);
+    if (len(localDir) > 0) {
+        out.Append(path::JoinTemp(localDir, StrL("MithenPDF"), StrL("MithenPDF-settings.txt")));
+        out.Append(path::JoinTemp(localDir, StrL("SumatraPDF"), StrL("SumatraPDF-settings.txt")));
+    }
+    if (len(appDir) > 0) {
+        out.Append(path::JoinTemp(appDir, StrL("SumatraPDF"), StrL("SumatraPDF-settings.txt")));
+    }
+}
+
+// an old installation is one whose settings file we could reset
+static bool OldSettingsExist() {
+    StrVec paths;
+    GetSettingsFilePaths(paths);
+    for (Str p : paths) {
+        if (file::Exists(p)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// deletes the app settings (hotkeys, colors, ...), asked for by default when
+// installing over an old installation (checks default to "yes")
+static void ResetSettingsFiles() {
+    StrVec paths;
+    GetSettingsFilePaths(paths);
+    for (Str p : paths) {
+        if (!file::Exists(p)) {
+            continue;
+        }
+        bool ok = file::Delete(p);
+        logf("ResetSettingsFiles: %s '%s'\n", ok ? StrL("deleted") : StrL("FAILED to delete"), p);
+    }
+}
+
 static void CopySettingsFile() {
     log(StrL("CopySettingsFile()\n"));
     // Settings moved from %APPDATA% to %LOCALAPPDATA% in 3.2; copy from the old location on upgrade.
@@ -1292,6 +1330,11 @@ static void InstallerThread(Flags* cli) {
 
     AddInstallDirToPath(allUsers, cli->installer.installDir);
 
+    // resetting settings is the default; -no-reset-settings opts out
+    if (!cli->installer.noResetSettings) {
+        ResetSettingsFiles();
+    }
+
     ProgressStep();
     log(StrL("Installer thread finished\n"));
 Exit:
@@ -1333,6 +1376,9 @@ static void RestartElevatedForAllUsers(Flags* cli) {
     if (cli->installer.noDesktopShortcut) {
         cmdLine = str::JoinTemp(cmdLine, StrL(" -no-desktop-shortcut"));
     }
+    if (cli->installer.noResetSettings) {
+        cmdLine = str::JoinTemp(cmdLine, StrL(" -no-reset-settings"));
+    }
     if (cli->silent) {
         cmdLine = str::JoinTemp(cmdLine, StrL(" -silent"));
     }
@@ -1367,10 +1413,15 @@ int GetInstallerWinDx() {
 static void StartInstallation(InstallerWnd* wnd) {
     gInstallStarted = true;
 
-    // create a progress bar in place of the Options button
+    // create a progress bar at the bottom left, where the options used to be
     int dx = DpiScale(GetInstallerWinDx() / 2);
     Rect rc(0, 0, dx, gButtonDy);
-    rc = HwndMapRectToWindow(rc, wnd->btnOptions->hwnd, wnd->hwnd);
+    {
+        Rect wr = HwndClientRect(wnd->hwnd);
+        int margin = DpiScale(kInstallerWinMargin);
+        rc.x = wr.x + margin;
+        rc.y = wr.y + wr.dy - gButtonDy - margin;
+    }
 
     int nInstallationSteps = CountInstallerPayloadFiles(gArchive);
     nInstallationSteps++; // for copying files to installation dir
@@ -1402,7 +1453,9 @@ static void StartInstallation(InstallerWnd* wnd) {
     DeleteWnd(&wnd->checkboxRegisterSearchFilter);
     DeleteWnd(&wnd->checkboxRegisterPreview);
     DeleteWnd(&wnd->checkboxDesktopShortcut);
-    DeleteWnd(&wnd->btnOptions);
+    DeleteWnd(&wnd->checkboxResetSettings);
+    // the Install button is replaced by the progress bar
+    DeleteWnd(&wnd->btnInstall);
 
     SetMsg(Tr("Installation in progress..."), kColorMsgInstallation);
     HwndRepaintNow(wnd->hwnd);
@@ -1410,8 +1463,6 @@ static void StartInstallation(InstallerWnd* wnd) {
     auto fn = MkFunc0(InstallerThread, &gCliNew);
     wnd->hThread = StartThread(fn, StrL("InstallerThread"));
 }
-
-static void OnButtonOptions(InstallerWnd* wnd);
 
 static TempStr GetInstalledExePathTemp(Flags* cli) {
     TempStr dir = cli->installer.installDir;
@@ -1428,10 +1479,6 @@ static void OnButtonInstall(InstallerWnd* wnd) {
     }
 
     Flags* cli = &gCliNew;
-    if (wnd->showOptions) {
-        // hide and disable "Options" button during installation
-        OnButtonOptions(wnd);
-    }
     wnd->btnInstall->SetIsEnabled(false);
 
     // TODO: if needs elevation, this might not have enough prermissions
@@ -1462,6 +1509,9 @@ static void OnButtonInstall(InstallerWnd* wnd) {
     // note: this checkbox isn't created on Windows 2000 and XP
     cli->installer.withPreview = wnd->checkboxRegisterPreview && wnd->checkboxRegisterPreview->IsChecked();
     cli->installer.noDesktopShortcut = !wnd->checkboxDesktopShortcut->IsChecked();
+    if (wnd->checkboxResetSettings) {
+        cli->installer.noResetSettings = !wnd->checkboxResetSettings->IsChecked();
+    }
 
     // Program Files always needs machine-style install + elevation
     if (IsPathUnderProgramFiles(cli->installer.installDir) && !cli->installer.allUsers) {
@@ -1488,16 +1538,6 @@ static void OnButtonExit() {
     }
 }
 
-static void StartSumatra() {
-    TempStr exePath = GetInstalledExePathTemp(&gCliNew);
-    RunNonElevated(exePath);
-}
-
-static void OnButtonStartSumatra() {
-    StartSumatra();
-    OnButtonExit();
-}
-
 constexpr int kBtnIdShowInstallLog = 100;
 
 static HRESULT CALLBACK InstallationFailedDialogCallback(HWND /*hwnd*/, UINT msg, WPARAM wParam, LPARAM lParam,
@@ -1506,7 +1546,7 @@ static HRESULT CALLBACK InstallationFailedDialogCallback(HWND /*hwnd*/, UINT msg
         case TDN_BUTTON_CLICKED:
             if ((int)wParam == kBtnIdShowInstallLog) {
                 Str logText = gLogBuf ? ToStr(*gLogBuf) : StrL("(no log available)");
-                ShowTextInWindowDialog(Tr("SumatraPDF installation log"), logText);
+                ShowTextInWindowDialog(Tr("MithenPDF installation log"), logText);
                 return S_FALSE; // keep TaskDialog open
             }
             break;
@@ -1581,15 +1621,15 @@ static void OnInstallationFinished(Flags* cli) {
     DeleteWnd(&gWnd->progressBar);
     auto isRtl = IsUIRtl();
     if (!cli->installer.fastInstall) {
-        gWnd->btnRunSumatra = CreateDefaultButton(gWnd->hwnd, Tr("Start SumatraPDF"), isRtl);
-        gWnd->btnRunSumatra->onClick = MkFunc0Void(OnButtonStartSumatra);
+        // a plain "Done" that just closes the installer; we never launch the app
+        gWnd->btnRunSumatra = CreateDefaultButton(gWnd->hwnd, Tr("Done"), isRtl);
+        gWnd->btnRunSumatra->onClick = MkFunc0Void(OnButtonExit);
     }
-    SetMsg(Tr("Thank you! SumatraPDF has been installed."), kColorMsgOk);
+    SetMsg(Tr("Thank you! MithenPDF has been installed."), kColorMsgOk);
     gMsgError = gFirstError;
     HwndRepaintNow(gWnd->hwnd);
 
     if (cli->installer.fastInstall) {
-        StartSumatra();
         ::ExitProcess(0);
     }
 }
@@ -1601,24 +1641,12 @@ static void ShowAndEnable(ControlBase* w, bool enable) {
     }
 }
 
-static Size SetButtonTextAndResize(Button* b, Str s) {
-    b->SetText(s);
-    Size size = b->GetIdealSize();
-    uint flags = SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED;
-    SetWindowPos(b->hwnd, nullptr, 0, 0, size.dx, size.dy, flags);
-    return size;
-}
-
 static TempStr GetDefaultInstallationDirTemp(bool forAllUsers, bool ignorePrev) {
     logf("GetDefaultInstallationDir(forAllUsers=%d, ignorePrev=%d)\n", (int)forAllUsers, (int)ignorePrev);
 
-    Str dirPrevInstall = gPrevInstall.installationDir;
-
-    if (dirPrevInstall && !ignorePrev) {
-        logf("  using %s from previous install\n", dirPrevInstall);
-        return dirPrevInstall;
-    }
-
+    // Always default to the documented location. A previous install in a
+    // non-standard folder (e.g. a test run with -d) must not become the new
+    // default; the user can still point the folder edit at it.
     if (forAllUsers) {
         TempStr dirAll = GetSpecialFolderTemp(CSIDL_PROGRAM_FILES, false);
         TempStr dir = path::JoinTemp(dirAll, StrL(kAppName));
@@ -1626,7 +1654,7 @@ static TempStr GetDefaultInstallationDirTemp(bool forAllUsers, bool ignorePrev) 
         return dir;
     }
 
-    // %APPLOCALDATA%\SumatraPDF
+    // %LOCALAPPDATA%\MithenPDF
     TempStr dirUser = GetSpecialFolderTemp(CSIDL_LOCAL_APPDATA, false);
     TempStr dir = path::JoinTemp(dirUser, StrL(kAppName));
     logf("  using '%s' from GetSpecialFolderTemp(CSIDL_LOCAL_APPDATA)\n", dir);
@@ -1689,7 +1717,8 @@ static void RelayoutInstaller(InstallerWnd* wnd) {
 }
 
 static void UpdateUIForOptionsState(InstallerWnd* wnd) {
-    bool showOpts = wnd->showOptions;
+    // options are always shown: there is no "Options" toggle button
+    bool showOpts = true;
 
     if (wnd->staticInstDir) {
         wnd->staticInstDir->SetVisibility(showOpts ? Visibility::Visible : Visibility::Hidden);
@@ -1701,32 +1730,10 @@ static void UpdateUIForOptionsState(InstallerWnd* wnd) {
     ShowAndEnable(wnd->checkboxRegisterSearchFilter, showOpts);
     ShowAndEnable(wnd->checkboxRegisterPreview, showOpts);
     ShowAndEnable(wnd->checkboxDesktopShortcut, showOpts);
-
-    auto* btnOptions = wnd->btnOptions;
-    //[ ACCESSKEY_GROUP Installer
-    //[ ACCESSKEY_ALTERNATIVE // ideally, the same access key is used for both
-    auto s = Tr("&Options");
-    if (showOpts) {
-        //| ACCESSKEY_ALTERNATIVE
-        s = Tr("Hide &Options");
-    }
-    Size sz = SetButtonTextAndResize(btnOptions, s);
-    if (wnd->optionsBtnSlot) {
-        wnd->optionsBtnSlot->dx = sz.dx;
-        wnd->optionsBtnSlot->dy = sz.dy;
-    }
-    //] ACCESSKEY_ALTERNATIVE
-    //] ACCESSKEY_GROUP Installer
+    ShowAndEnable(wnd->checkboxResetSettings, showOpts);
 
     RelayoutInstaller(wnd);
     HwndRepaintNow(wnd->hwnd);
-    HwndSetFocus(btnOptions->hwnd);
-}
-
-static void OnButtonOptions(InstallerWnd* wnd) {
-    // toggle options ui
-    wnd->showOptions = !wnd->showOptions;
-    UpdateUIForOptionsState(wnd);
 }
 
 static int CALLBACK BrowseCallbackProc(HWND hwnd, UINT msg, LPARAM lp, LPARAM lpData) {
@@ -1847,13 +1854,11 @@ static void CreateInstallerWindowControls(InstallerWnd* wnd, Flags* cli) {
     bool isRtl = IsUIRtl();
     bool showInstallButton = !cli->installer.fastInstall;
 
-    wnd->btnInstall = CreateDefaultButton(hwnd, Tr("Install SumatraPDF"), isRtl);
+    wnd->btnInstall = CreateDefaultButton(hwnd, Tr("Install MithenPDF"), isRtl);
     wnd->btnInstall->onClick = MkFunc0(OnButtonInstall, wnd);
     ShowAndEnable(wnd->btnInstall, showInstallButton);
 
-    wnd->btnOptions = CreateDefaultButton(hwnd, Tr("&Options"), isRtl);
-    wnd->btnOptions->onClick = MkFunc0(OnButtonOptions, wnd);
-    Size optSz = wnd->btnOptions->GetIdealSize();
+    Size optSz = wnd->btnInstall->GetIdealSize();
     gButtonDy = optSz.dy;
     gBottomPartDy = gButtonDy + (margin * 2);
 
@@ -1862,13 +1867,13 @@ static void CreateInstallerWindowControls(InstallerWnd* wnd, Flags* cli) {
     if (IsProcessAndOsArchSame()) {
         // for Windows XP, this means only basic thumbnail support
         Str s = Tr("Let Windows show &previews of PDF documents");
-        bool isChecked = cli->installer.withPreview || IsPreviewInstalled();
+        bool isChecked = true;
         if (isChecked) {
             showOptions = true;
         }
         wnd->checkboxRegisterPreview = CreateCheckbox(hwnd, s, isChecked);
 
-        isChecked = cli->installer.withFilter || IsSearchFilterInstalled();
+        isChecked = true;
         if (isChecked) {
             showOptions = true;
         }
@@ -1877,16 +1882,24 @@ static void CreateInstallerWindowControls(InstallerWnd* wnd, Flags* cli) {
     }
 
     {
-        bool isChecked = !cli->installer.noDesktopShortcut;
-        if (!isChecked) {
+        bool isChecked = false;
+        wnd->checkboxDesktopShortcut = CreateCheckbox(hwnd, Tr("Install &desktop shortcut"), isChecked);
+    }
+
+    // offer to reset settings (hotkeys etc.) from a previous installation;
+    // defaults to "yes" so a stale setup does not leak into the fresh one
+    if (OldSettingsExist() || HasPreviousInstall()) {
+        bool isChecked = !cli->installer.noResetSettings;
+        if (isChecked) {
             showOptions = true;
         }
-        wnd->checkboxDesktopShortcut = CreateCheckbox(hwnd, Tr("Install &desktop shortcut"), isChecked);
+        wnd->checkboxResetSettings =
+            CreateCheckbox(hwnd, Tr("&Reset settings from a previous installation (hotkeys, colors, ...)"), isChecked);
     }
 
     {
         Str s = Tr("Install for all users");
-        bool isChecked = cli->installer.allUsers;
+        bool isChecked = true;
         if (isChecked) {
             showOptions = true;
         }
@@ -1907,7 +1920,7 @@ static void CreateInstallerWindowControls(InstallerWnd* wnd, Flags* cli) {
     wnd->editInstallationDir->SetText(cli->installer.installDir);
 
     wnd->staticInstDir = NewVirtText({
-        .s = Tr("Install SumatraPDF in &folder:"),
+        .s = Tr("Install MithenPDF in &folder:"),
         .font = GetDefaultGuiFont(),
         .textColor = kColBlack,
         .isRtl = IsUIRtl(),
@@ -1941,6 +1954,7 @@ static void CreateInstallerWindowControls(InstallerWnd* wnd, Flags* cli) {
     addCheck(wnd->checkboxRegisterSearchFilter, opts);
     addCheck(wnd->checkboxDesktopShortcut, opts);
     addCheck(wnd->checkboxRegisterPreview, opts);
+    addCheck(wnd->checkboxResetSettings, opts);
     wnd->optionsBox = new Padding(opts, Insets{0, margin, 0, margin});
 
     // options sit at the bottom of the branded area, above the button row
@@ -1951,8 +1965,6 @@ static void CreateInstallerWindowControls(InstallerWnd* wnd, Flags* cli) {
     auto* bottom = new HBox();
     bottom->alignCross = CrossAxisAlign::CrossCenter;
     bottom->gap = GetDefaultGuiFont()->averageCharWidth;
-    wnd->optionsBtnSlot = new HwndSlot(wnd->btnOptions->hwnd, optSz.dx, optSz.dy);
-    bottom->AddChild(wnd->optionsBtnSlot);
     bottom->AddChild(new Spacer(0, 0), 1);
     if (showInstallButton) {
         bottom->AddChild(new HwndSlot(wnd->btnInstall->hwnd, instSz.dx, instSz.dy));
@@ -1982,11 +1994,10 @@ static void CreateInstallerWindowControls(InstallerWnd* wnd, Flags* cli) {
     if (wnd->checkboxRegisterPreview) {
         hwnds[nHwnds++] = wnd->checkboxRegisterPreview->hwnd;
     }
-    hwnds[nHwnds++] = wnd->btnOptions->hwnd;
     SetTabOrder(hwnds, nHwnds);
 
     SetInstallButtonElevationState();
-    HwndSetFocus(showInstallButton ? wnd->btnInstall->hwnd : wnd->btnOptions->hwnd);
+    HwndSetFocus(showInstallButton ? wnd->btnInstall->hwnd : wnd->editInstallationDir->hwnd);
 }
 //] ACCESSKEY_GROUP Installer
 
@@ -2003,7 +2014,7 @@ static LRESULT CALLBACK WndProcInstallerFrame(HWND hwnd, UINT msg, WPARAM wp, LP
     switch (msg) {
         case WM_CTLCOLORSTATIC: {
             if (gWnd->hbrBackground == nullptr) {
-                gWnd->hbrBackground = CreateSolidBrush(MkRgb(0xff, 0xf2, 0));
+                gWnd->hbrBackground = CreateSolidBrush(MkRgb(0xff, 0xff, 0xff));
             }
             HDC hdc = (HDC)wp;
             SetTextColor(hdc, kColBlack);
@@ -2014,7 +2025,6 @@ static LRESULT CALLBACK WndProcInstallerFrame(HWND hwnd, UINT msg, WPARAM wp, LP
         case WM_DESTROY:
             gWnd->staticInstDir = nullptr;
             gWnd->optionsBox = nullptr;
-            gWnd->optionsBtnSlot = nullptr;
             delete gWnd->layout;
             gWnd->layout = nullptr;
             delete gWnd->virtRoot;
@@ -2071,7 +2081,7 @@ static bool CreateInstallerWnd(Flags* cli) {
         RegisterClassExW(&wcex);
     }
 
-    TempStr title = fmt(Tr("SumatraPDF %s Installer").s, StrL(CURR_VERSION_STRA));
+    TempStr title = fmt(Tr("MithenPDF %s Installer").s, StrL(CURR_VERSION_STRA));
     DWORD exStyle = 0;
     if (trans::IsCurrLangRtl()) {
         exStyle = WS_EX_LAYOUTRTL;
@@ -2097,7 +2107,7 @@ static bool CreateInstallerWnd(Flags* cli) {
 }
 
 static bool CreateInstallerWindow(Flags* cli) {
-    gDefaultMsg = Tr("Thank you for choosing SumatraPDF!");
+    gDefaultMsg = Tr("Thank you for choosing MithenPDF!");
     if (!CreateInstallerWnd(cli)) {
         return false;
     }
@@ -2407,6 +2417,7 @@ int RunInstaller() {
     gCliNew.installer.withFilter = gCli->installer.withFilter;
     gCliNew.installer.withPreview = gCli->installer.withPreview;
     gCliNew.installer.noDesktopShortcut = gCli->installer.noDesktopShortcut;
+    gCliNew.installer.noResetSettings = gCli->installer.noResetSettings;
     gCliNew.silent = gCli->silent;
     gCliNew.installer.runInstallNow = gCli->installer.runInstallNow;
     gCliNew.installer.fastInstall = gCli->installer.fastInstall;
@@ -2415,7 +2426,7 @@ int RunInstaller() {
         bool removeLog = !gCli->installer.runInstallNow;
         StartLogToFile(installerLogPath, removeLog);
     }
-    logf("------------- Starting SumatraPDF installation\n");
+    logf("------------- Starting MithenPDF installation\n");
     LogParentProcessChain();
     if (!gCli->silent && !IsProcessAndOsArchSame()) {
         logf("quitting because !IsProcessAndOsArchSame()\n");
@@ -2446,7 +2457,10 @@ int RunInstaller() {
 
     gCliNew.installer.installDir = str::Dup(gCli->installer.installDir);
     if (len(gCliNew.installer.installDir) == 0) {
-        auto dir = GetDefaultInstallationDirTemp(gCliNew.installer.allUsers, false);
+        // "Install for all users" is checked by default, so the default dir is
+        // Program Files (never a leftover folder from a previous install)
+        gCliNew.installer.allUsers = true;
+        auto dir = GetDefaultInstallationDirTemp(true, false);
         gCliNew.installer.installDir = str::Dup(dir);
     }
     // Program Files installs must be all-users (and will elevate below)
@@ -2513,9 +2527,7 @@ int RunInstaller() {
 
     log(StrL("Installer finished\n"));
 Exit:
-    if (installerLogPath && gInstallStarted) {
-        RunNonElevated(installerLogPath);
-    } else if (!gCli->silent && (ret != 0 || gInstallFailed)) {
+    if (!gInstallStarted && !gCli->silent && (ret != 0 || gInstallFailed)) {
         // if installation failed, save log to file and show it
         installerLogPath = GetInstallerLogPath();
         bool ok = WriteCurrentLogToFile(installerLogPath);

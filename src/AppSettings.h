@@ -86,10 +86,6 @@ FileEBookUI* NewFileEBookUI();
 FileEBookUI* CopyFileEBookUI(const FileEBookUI*);
 void DeleteFileEBookUI(FileEBookUI*);
 
-Favorite* NewFavorite(Str pageNo, Str name = {}, Str pageLabel = {});
-Favorite* NewFavorite(int pageNo, Str name = {}, Str pageLabel = {});
-void DeleteFavorite(Favorite* fav);
-
 Settings* NewSettings(Str);
 Str SerializeSettings(Settings* prefs, Str prevData);
 void DeleteSettings(Settings*);

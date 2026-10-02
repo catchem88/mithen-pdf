@@ -35,7 +35,7 @@ extern "C" {
 // someone to sign, i.e. a signature field with no signature in it yet. Its
 // field name (which may legitimately be empty) goes to fieldNameOut, so the
 // Sign Document dialog can preselect that field (issue #5964).
-bool IsUnsignedSignatureWidget(Annotation* widget, TempStr* fieldNameOut) {
+bool IsUnsignedSignatureWidget(Annotation* widget, TempStr* fieldNameOut, bool requireUnsigned) {
     if (!AnnotationIsLive(widget) || widget->type != AnnotationType::Widget) {
         return false;
     }
@@ -48,7 +48,8 @@ bool IsUnsignedSignatureWidget(Annotation* widget, TempStr* fieldNameOut) {
     AutoUnlockRecursiveMutex scope(&e->docLock);
     bool res = false;
     fz_try(ctx) {
-        if (pdf_widget_type(ctx, a) == PDF_WIDGET_TYPE_SIGNATURE && !pdf_widget_is_signed(ctx, a)) {
+        bool isSig = pdf_widget_type(ctx, a) == PDF_WIDGET_TYPE_SIGNATURE;
+        if (isSig && (!requireUnsigned || !pdf_widget_is_signed(ctx, a))) {
             res = true;
             if (fieldNameOut) {
                 char* name = pdf_load_field_name(ctx, pdf_annot_obj(ctx, a));
@@ -100,9 +101,7 @@ void EngineMupdfGetUnsignedSignatureFields(EngineBase* engine, StrVec& names, Ve
                 if (pdf_widget_type(ctx, w) != PDF_WIDGET_TYPE_SIGNATURE) {
                     continue;
                 }
-                if (pdf_widget_is_signed(ctx, w)) {
-                    continue;
-                }
+                // list signed fields too: re-signing one replaces its signature
                 char* name = pdf_load_field_name(ctx, pdf_annot_obj(ctx, w));
                 names.Append(name ? Str(name) : StrL(""));
                 VecAppend(pageNos, pageIdx + 1);
@@ -125,7 +124,7 @@ void EngineMupdfGetUnsignedSignatureFields(EngineBase* engine, StrVec& names, Ve
 // (caller drops it). Dropping that page before signing unbinds the annot
 // ("annotation not bound to any page") if nothing else is holding it.
 static pdf_annot* FindUnsignedSignatureWidget(fz_context* ctx, pdf_document* doc, Str name, int* pageNoOut,
-                                              pdf_page** pageOut) {
+                                              pdf_page** pageOut, bool requireUnsigned = true) {
     pdf_page* page = nullptr;
     pdf_annot* found = nullptr;
     fz_var(page);
@@ -135,7 +134,10 @@ static pdf_annot* FindUnsignedSignatureWidget(fz_context* ctx, pdf_document* doc
         for (int pageIdx = 0; !found && pageIdx < nPages; pageIdx++) {
             page = pdf_load_page(ctx, doc, pageIdx);
             for (pdf_annot* w = pdf_first_widget(ctx, page); w; w = pdf_next_widget(ctx, w)) {
-                if (pdf_widget_type(ctx, w) != PDF_WIDGET_TYPE_SIGNATURE || pdf_widget_is_signed(ctx, w)) {
+                if (pdf_widget_type(ctx, w) != PDF_WIDGET_TYPE_SIGNATURE) {
+                    continue;
+                }
+                if (requireUnsigned && pdf_widget_is_signed(ctx, w)) {
                     continue;
                 }
                 char* wName = pdf_load_field_name(ctx, pdf_annot_obj(ctx, w));
@@ -227,7 +229,9 @@ bool EngineMupdfSignDocument(EngineBase* engine, const PdfSignArgs& args, Str* e
             signer = pkcs7_windows_read_pfx(ctx, CStrTemp(args.certPath), CStrTemp(args.certPassword));
         }
         if (args.fieldName) {
-            widget = FindUnsignedSignatureWidget(ctx, epdf->pdfdoc, args.fieldName, &pageNo, &page);
+            // an already-signed field is allowed: signing it again replaces the
+            // old signature
+            widget = FindUnsignedSignatureWidget(ctx, epdf->pdfdoc, args.fieldName, &pageNo, &page, false);
             if (!widget) {
                 fz_throw(ctx, FZ_ERROR_ARGUMENT, "signature field '%s' is gone", CStrTemp(args.fieldName));
             }
@@ -283,6 +287,58 @@ bool EngineMupdfSignDocument(EngineBase* engine, const PdfSignArgs& args, Str* e
         epdf->modifiedAnnotations = true;
     }
     return ok;
+}
+
+// Removes the signature from the signature field named `name`: clears its /V
+// and regenerates the empty appearance. Returns true if a signed field was
+// found and cleared.
+bool EngineMupdfRemoveSignatureByName(EngineBase* engine, Str name) {
+    EngineMupdf* epdf = AsEngineMupdf(engine);
+    if (!epdf || !epdf->pdfdoc || len(name) == 0) {
+        return false;
+    }
+    fz_context* ctx = epdf->BaseCtx();
+    AutoUnlockRecursiveMutex scope(&epdf->docLock);
+    int clearedPage = 0;
+    fz_var(clearedPage);
+    fz_try(ctx) {
+        int nPages = pdf_count_pages(ctx, epdf->pdfdoc);
+        for (int pageIdx = 0; pageIdx < nPages && clearedPage == 0; pageIdx++) {
+            pdf_page* page = pdf_load_page(ctx, epdf->pdfdoc, pageIdx);
+            fz_try(ctx) {
+                for (pdf_annot* w = pdf_first_widget(ctx, page); w; w = pdf_next_widget(ctx, w)) {
+                    if (pdf_widget_type(ctx, w) != PDF_WIDGET_TYPE_SIGNATURE) {
+                        continue;
+                    }
+                    char* wn = pdf_load_field_name(ctx, pdf_annot_obj(ctx, w));
+                    bool match = str::Eq(Str(wn), name);
+                    fz_free(ctx, wn);
+                    if (!match) {
+                        continue;
+                    }
+                    pdf_clear_signature(ctx, w);
+                    clearedPage = pageIdx + 1;
+                    break;
+                }
+            }
+            fz_always(ctx) {
+                fz_drop_page(ctx, (fz_page*)page);
+            }
+            fz_catch(ctx) {
+                fz_rethrow(ctx);
+            }
+        }
+    }
+    fz_catch(ctx) {
+        fz_report_error(ctx);
+        return false;
+    }
+    if (clearedPage == 0) {
+        return false;
+    }
+    DropCachedPageRendering(epdf, clearedPage);
+    epdf->modifiedAnnotations = true;
+    return true;
 }
 
 // Certificates in the current user's Personal store that have a private key

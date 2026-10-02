@@ -84,7 +84,7 @@ void InverseSearchWnd::OnOk(VirtMouseEvent*) {
 }
 
 void InverseSearchWnd::OnHelp(VirtMouseEvent*) {
-    LaunchDocumentation(StrL("/LaTeX-integration"));
+    // no manual in MithenPDF; the button is removed, this handler is history
 }
 
 static void OnClose(WindowBase::CloseEvent* /*ev*/) {

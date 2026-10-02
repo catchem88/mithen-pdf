@@ -50,7 +50,6 @@ struct SettingsWnd : WindowBase {
     Checkbox* chkShowToc = nullptr;
     Checkbox* chkRememberState = nullptr;
     Checkbox* chkUseTabs = nullptr;
-    Checkbox* chkCheckUpdates = nullptr;
     Checkbox* chkRememberOpened = nullptr;
 
     VirtButton* btnCancel = nullptr;
@@ -199,9 +198,6 @@ void SettingsWnd::OnOk(VirtMouseEvent*) {
     }
     if (chkUseTabs) {
         gSettings->useTabs = chkUseTabs->IsChecked();
-    }
-    if (chkCheckUpdates) {
-        gSettings->checkForUpdates = chkCheckUpdates->IsChecked();
     }
     if (chkRememberOpened) {
         gSettings->rememberOpenedFiles = chkRememberOpened->IsChecked();
@@ -361,13 +357,6 @@ bool SettingsWnd::Create(MainWindow* mainWin) {
 
     chkUseTabs = MakeCheckbox(hwnd, Tr("Use &tabs"), isRtl, gSettings && gSettings->useTabs, 0);
     vbox->AddChild(chkUseTabs);
-
-    chkCheckUpdates =
-        MakeCheckbox(hwnd, Tr("Automatically check for &updates"), isRtl, gSettings && gSettings->checkForUpdates, 4);
-    if (!HasPermission(Perm::InternetAccess)) {
-        chkCheckUpdates->SetIsEnabled(false);
-    }
-    vbox->AddChild(chkCheckUpdates);
 
     chkRememberOpened =
         MakeCheckbox(hwnd, Tr("Remember &opened files"), isRtl, gSettings && gSettings->rememberOpenedFiles, 4);

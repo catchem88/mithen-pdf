@@ -34,8 +34,6 @@
 #include "SumatraPDF.h"
 #include "Canvas.h"
 #include "TableOfContents.h"
-#include "Favorites.h"
-#include "FileHistory.h"
 #include "Menu.h"
 #include "Translations.h"
 #include "PagePosition.h"
@@ -57,8 +55,6 @@
 struct MainWindow;
 struct WindowTab;
 struct TocItem;
-struct FileState;
-struct Favorite;
 struct ThumbnailPaletteCtrl;
 struct Annotation;
 
@@ -76,12 +72,9 @@ struct ItemDataCP {
     // a "Debug: ..." command; those are listed after all the others
     bool isDebug = false;
     WindowTab* tab = nullptr;
-    Str filePath;
     TocItem* tocItem = nullptr;
     int indent = 0;
     int pageNo = 0; // toc entry destination page (0 if none), shown in the list
-    FileState* favFs = nullptr;
-    Favorite* fav = nullptr;
     Annotation* annot = nullptr;
     // a "= settings" row. In the setting-picking stage the row text is the
     // setting's dotted path; in the value-picking stage it is a candidate value
@@ -119,10 +112,8 @@ struct CommandPaletteWnd : WindowBase {
 
     Edit* editQuery = nullptr;
     StrVecCP tabs;
-    StrVecCP fileHistory;
     StrVecCP commands;
     StrVecCP toc;
-    StrVecCP favorites;
     StrVecCP annotations;
     StrVecCP settings;
     VirtListBox* listBox = nullptr;
@@ -153,7 +144,6 @@ struct CommandPaletteWnd : WindowBase {
     void CollectTabsRegular(MainWindow*, WindowTab* currTab);
     void CollectTabsMru(MainWindow*, WindowTab* currTab);
     void CollectToc(MainWindow*);
-    void CollectFavorites(MainWindow*);
     void CollectAnnotations(MainWindow*);
     void CollectSettings();
     void FillSwitchRow();
@@ -173,9 +163,7 @@ struct CommandPaletteWnd : WindowBase {
     void SwitchToCommands();
     void SwitchToTabs();
     void SwitchToEverything();
-    void SwitchToFileHistory();
     void SwitchToTOC();
-    void SwitchToFavorites();
     void SwitchToSettings();
     void BeginEditSettingValue(Str path);
     void ReturnToSettings(Str selPath);
@@ -206,14 +194,9 @@ static bool SplitSettingValueQuery(Str query, Str& path, Str& value);
 static i32 gCommandsNoActivate[] = {
     CmdOptions,
     CmdSetInverseSearch,
-    CmdChangeLanguage,
     CmdHelpAbout,
-    CmdHelpOpenManual,
-    CmdHelpOpenManualOnWebsite,
-    CmdHelpOpenKeyboardShortcuts,
     CmdHelpVisitWebsite,
     CmdOpenFile,
-    CmdOpenFileNoHistory,
     CmdProperties,
     CmdNewWindow,
     CmdDuplicateInNewWindow,
@@ -274,8 +257,6 @@ static i32 gCmdIdToExecOnClose = 0;
 // canvas mouse position when the palette was opened, as WM_COMMAND LPARAM
 // (0 if the mouse was not over the canvas); the live cursor is over the palette
 static LPARAM gCursorPosLParam = 0;
-static FileState* gFavFsToGoToOnClose = nullptr;
-static Favorite* gFavToGoToOnClose = nullptr;
 
 constexpr int kPaletteThumbnailDx = 120;
 constexpr int kPaletteThumbnailDy = 170;
@@ -904,15 +885,6 @@ void SafeDeleteCommandPaletteWnd() {
             HwndPostCommand(win->hwndFrame, cmdId, lp);
         }
     }
-    if (gFavToGoToOnClose) {
-        FileState* fs = gFavFsToGoToOnClose;
-        Favorite* fav = gFavToGoToOnClose;
-        gFavFsToGoToOnClose = nullptr;
-        gFavToGoToOnClose = nullptr;
-        if (IsMainWindowValidAndNotClosing(win)) {
-            GoToFavorite(win, fs, fav);
-        }
-    }
 }
 
 void ScheduleDeleteAndExecCommand(i32 cmdId) {
@@ -935,22 +907,15 @@ void CommandPaletteSetCurrentSelection(CommandPaletteWnd* wnd, int idx) {
 struct RemoveItemOp {
     CommandPaletteWnd* wnd = nullptr;
     WindowTab* tab = nullptr;
-    Favorite* fav = nullptr;
-    FileState* favFs = nullptr;
-    Str filePath;
     int currSel = 0;
 };
 
-// CloseTab / DelFavorite can pump; this runs after the key handler returns.
+// CloseTab can pump; this runs after the key handler returns.
 static void ApplyRemoveItem(RemoveItemOp* op) {
     CommandPaletteWnd* wnd = op->wnd;
     WindowTab* tab = op->tab;
-    Favorite* fav = op->fav;
-    FileState* favFs = op->favFs;
-    Str filePath = op->filePath;
     int currSel = op->currSel;
     defer {
-        str::Free(filePath);
         delete op;
     };
 
@@ -966,10 +931,6 @@ static void ApplyRemoveItem(RemoveItemOp* op) {
     MainWindow* host = wnd->win;
     if (tab) {
         CloseTab(tab, false);
-    } else if (fav && favFs) {
-        DelFavorite(favFs, fav);
-    } else if (len(filePath) > 0 && host) {
-        ForgetFileFromFrequentlyRead(host, filePath);
     }
 
     if (gCommandPaletteWnd != wnd) {
@@ -1023,16 +984,8 @@ void CommandPaletteWnd::SwitchToEverything() {
     SwitchToPrefix(Str(kPalettePrefixEverything));
 }
 
-void CommandPaletteWnd::SwitchToFileHistory() {
-    SwitchToPrefix(Str(kPalettePrefixFileHistory));
-}
-
 void CommandPaletteWnd::SwitchToTOC() {
     SwitchToPrefix(Str(kPalettePrefixTOC));
-}
-
-void CommandPaletteWnd::SwitchToFavorites() {
-    SwitchToPrefix(Str(kPalettePrefixFavorites));
 }
 
 void CommandPaletteWnd::SwitchToSettings() {
@@ -1057,8 +1010,8 @@ void CommandPaletteWnd::BeginEditSettingValue(Str path) {
 }
 
 // Back to the setting-picking stage with selPath selected. Applying a value
-// reloads gSettings, so the rows built from it (settings, file history,
-// favorites) is rebuilt; selPath usually points into those rows, hence the copy.
+// reloads gSettings, so the rows built from it (settings) is rebuilt; selPath
+// usually points into those rows, hence the copy.
 void CommandPaletteWnd::ReturnToSettings(Str selPath) {
     TempStr path = str::DupTemp(selPath);
     CollectStrings(win);
@@ -1171,11 +1124,10 @@ bool CommandPaletteWnd::AdvanceSelection(int dir) {
     return true;
 }
 
-// Delete selected list item when it is removable: file-history entry, open tab,
-// or favorite. Commands and TOC entries are not removable (caller should let
-// the edit control handle Delete). After removal, refilter and keep selection
-// on the same index (or the new last item if we deleted the last row).
-// remove selected history / tab / favorite; keeps selection index stable
+// Delete the selected list item when it is removable: an open tab. Commands and
+// TOC entries are not removable (caller should let the edit control handle
+// Delete). After removal, refilter and keep selection on the same index (or the
+// new last item if we deleted the last row).
 bool CommandPaletteWnd::RemoveSelectedItem() {
     if (!listBox || !listBox->model) {
         return false;
@@ -1200,19 +1152,13 @@ bool CommandPaletteWnd::RemoveSelectedItem() {
     }
 
     WindowTab* tab = d->tab;
-    Favorite* fav = d->fav;
-    FileState* favFs = d->favFs;
-    Str filePath = d->filePath;
-    if (!tab && !(fav && favFs) && len(filePath) == 0) {
+    if (!tab) {
         return false;
     }
 
     auto* op = new RemoveItemOp;
     op->wnd = this;
     op->tab = tab;
-    op->fav = fav;
-    op->favFs = favFs;
-    op->filePath = str::Dup(filePath);
     op->currSel = currSel;
     uitask::Post(MkFunc0<RemoveItemOp>(ApplyRemoveItem, op), "PaletteRemoveItem");
     return true;
@@ -1416,30 +1362,12 @@ void CommandPaletteWnd::ExecuteCurrentSelection() {
         return;
     }
 
-    if (data->fav) {
-        gHwndToActivateOnClose = win->hwndFrame;
-        gFavFsToGoToOnClose = data->favFs;
-        gFavToGoToOnClose = data->fav;
-        ScheduleDeleteAndExecCommand();
-        return;
-    }
-
     if (data->annot) {
         WindowTab* curr = win->CurrentTab();
         if (curr) {
             SetSelectedAnnotation(curr, data->annot);
         }
         gHwndToActivateOnClose = win->hwndFrame;
-        ScheduleDeleteAndExecCommand();
-        return;
-    }
-    auto filePath = data->filePath;
-    if (filePath) {
-        LoadArgs args(filePath, win);
-        args.activateExisting = true;
-        args.activateExistingInWindow = true;
-        args.forceReuse = false;
-        StartLoadDocument(&args);
         ScheduleDeleteAndExecCommand();
         return;
     }
@@ -1563,10 +1491,6 @@ void CommandPaletteWnd::FillSwitchRow() {
     };
     addSwitch(Tr("> Commands"), Str(kPalettePrefixCommands));
     addSwitch(Tr("@ Tabs"), Str(kPalettePrefixTabs));
-    addSwitch(Tr("# History"), Str(kPalettePrefixFileHistory));
-    if (len(favorites) > 0) {
-        addSwitch(Tr("$ Favorites"), Str(kPalettePrefixFavorites));
-    }
     if (len(toc) > 0) {
         addSwitch(Tr("% TOC"), Str(kPalettePrefixTOC));
     }
@@ -1600,9 +1524,7 @@ enum {
     kHelpNone = -1,
     kHelpSmartTab,
     kHelpCommands,
-    kHelpHistory,
     kHelpTabs,
-    kHelpFavorites,
     kHelpAnnotations,
     kHelpSettings,
     kHelpSettingValue,
@@ -1621,14 +1543,8 @@ static int PaletteHelpKind(Str filter, bool smartTab) {
     if (str::StartsWith(filter, Str(kPalettePrefixTabs))) {
         return kHelpTabs;
     }
-    if (str::StartsWith(filter, Str(kPalettePrefixFileHistory))) {
-        return kHelpHistory;
-    }
     if (str::StartsWith(filter, Str(kPalettePrefixTOC))) {
         return kHelpToc;
-    }
-    if (str::StartsWith(filter, Str(kPalettePrefixFavorites))) {
-        return kHelpFavorites;
     }
     if (str::StartsWith(filter, Str(kPalettePrefixAnnotations))) {
         return kHelpAnnotations;
@@ -1671,19 +1587,9 @@ void CommandPaletteWnd::UpdateHelpRow() {
             strings[nHelp++] = Tr("Space for sticky mode");
             strings[nHelp++] = Tr("Del close tab");
             break;
-        case kHelpHistory:
-            strings[nHelp++] = Tr("Enter open file");
-            strings[nHelp++] = Tr("Del remove from history");
-            strings[nHelp++] = Tr("Esc close");
-            break;
         case kHelpTabs:
             strings[nHelp++] = Tr("Enter switch to tab");
             strings[nHelp++] = Tr("Del close tab");
-            strings[nHelp++] = Tr("Esc close");
-            break;
-        case kHelpFavorites:
-            strings[nHelp++] = Tr("Enter go to favorite");
-            strings[nHelp++] = Tr("Del remove favorite");
             strings[nHelp++] = Tr("Esc close");
             break;
         case kHelpAnnotations:
@@ -2089,10 +1995,6 @@ static bool AllowCommand(const AppCommandCtx& ctx, i32 cmdId) {
     return CommandShouldShow(GetCommandVisibility(cmdId, ctx, CommandSurface::Palette));
 }
 
-static TempStr ConvertPathForDisplayTemp(Str s) {
-    return path::GetBaseNameTemp(s);
-}
-
 static TempStr RemovePrefixFromString(Str s) {
     return str::ReplaceTemp(s, StrL("&"), StrL(""));
 }
@@ -2215,10 +2117,6 @@ static TempStr UpdateCommandNameTemp(MainWindow* win, int cmdId, Str s) {
             isToggle = true;
             newIsOn = !win->findMatchWholeWord;
         } break;
-        case CmdFavoriteToggle: {
-            isToggle = true;
-            newIsOn = !gSettings->showFavorites;
-        } break;
         case CmdTogglePageInfo: {
             isToggle = true;
             newIsOn = !win->pageInfoWanted;
@@ -2288,19 +2186,6 @@ static TempStr UpdateCommandNameTemp(MainWindow* win, int cmdId, Str s) {
             return Tr("Unregister Windows Search Filter");
         }
         return Tr("Register Windows Search Filter");
-    }
-
-    if (cmdId == CmdAIChatWithClaudeCode) {
-        return Tr("AI Claude chat with document");
-    }
-    if (cmdId == CmdAIChatWithGrokBuild) {
-        return Tr("AI Grok chat with document");
-    }
-    if (cmdId == CmdAIChatWithOpenAICodex) {
-        return Tr("AI Codex chat with document");
-    }
-    if (cmdId == CmdAIChatWithAntiGravity) {
-        return Tr("AI Antigravity chat with document");
     }
 
     return s;
@@ -2405,29 +2290,6 @@ void CommandPaletteWnd::CollectToc(MainWindow* mainWin) {
     currTocIdx = bestIdx;
 }
 
-static void AppendFavoritesForFile(StrVecCP& favorites, FileState* fs, bool isCurrent) {
-    if (!fs || !fs->favorites) {
-        return;
-    }
-    for (Favorite* fav : *fs->favorites) {
-        TempStr rn = FavReadableNameTemp(fav);
-        TempStr disp;
-        if (isCurrent) {
-            disp = rn;
-        } else {
-            TempStr base = path::GetBaseNameTemp(fs->filePath);
-            disp = fmt("%s : %s", base, rn);
-        }
-        if (len(disp) == 0) {
-            continue;
-        }
-        ItemDataCP data;
-        data.favFs = fs;
-        data.fav = fav;
-        favorites.Append(disp, data);
-    }
-}
-
 void CommandPaletteWnd::CollectAnnotations(MainWindow* mainWin) {
     annotations.Reset();
     WindowTab* tab = mainWin ? mainWin->CurrentTab() : nullptr;
@@ -2447,31 +2309,6 @@ void CommandPaletteWnd::CollectAnnotations(MainWindow* mainWin) {
         ItemDataCP data;
         data.annot = a;
         annotations.Append(AnnotationReadableNameTemp(a->type), data);
-    }
-}
-
-void CommandPaletteWnd::CollectFavorites(MainWindow* mainWin) {
-    favorites.Reset();
-    WindowTab* currTab = mainWin->CurrentTab();
-    Str currFilePath = currTab ? currTab->filePath : Str();
-
-    FileState* currFs = nullptr;
-    if (currFilePath) {
-        for (FileState* fs : *gSettings->fileStates) {
-            if (str::Eq(fs->filePath, currFilePath)) {
-                currFs = fs;
-                break;
-            }
-        }
-    }
-    if (currFs) {
-        AppendFavoritesForFile(favorites, currFs, true);
-    }
-    for (FileState* fs : *gSettings->fileStates) {
-        if (fs == currFs) {
-            continue;
-        }
-        AppendFavoritesForFile(favorites, fs, false);
     }
 }
 
@@ -2575,24 +2412,12 @@ void CommandPaletteWnd::CollectStrings(MainWindow* mainWin) {
     }
 
     CollectToc(mainWin);
-    CollectFavorites(mainWin);
     WindowTab* tab = mainWin->CurrentTab();
     if (tab && EngineSupportsAnnotations(tab->GetEngine())) {
         StartLoadingAnnotationsForUi(tab);
     }
     CollectAnnotations(mainWin);
     CollectSettings();
-
-    fileHistory.Reset();
-    for (FileState* fs : *gSettings->fileStates) {
-        TempStr s = ConvertPathForDisplayTemp(fs->filePath);
-        if (len(s) == 0) {
-            continue;
-        }
-        ItemDataCP data;
-        data.filePath = fs->filePath;
-        fileHistory.Append(s, data);
-    }
 
     StrVecCP tempCommands;
     int cmdIdx = 0;
@@ -2732,8 +2557,6 @@ void CommandPaletteWnd::DrawListBoxItem(VirtListBox::DrawItemEvent* ev) {
     } else if (data->tocItem && data->tocItem->loc.chapter >= 1) {
         // chaptered doc: destination unresolved until clicked, show the chapter
         rightStr = fmt("ch%d", data->tocItem->loc.chapter);
-    } else if (data->filePath) {
-        rightStr = path::GetDirTemp(data->filePath);
     }
 
     int padX = DpiScale(4);
@@ -2750,34 +2573,20 @@ void CommandPaletteWnd::DrawListBoxItem(VirtListBox::DrawItemEvent* ev) {
         }
     }
 
-    // reserve space on the right for rightStr (accel key, dir, or "p34") so it
-    // is always visible; the item text gets the remaining space and is
-    // ellipsized when too long. File history: the filename takes precedence
-    // over a long directory (issue #6104).
+    // reserve space on the right for rightStr (accel key or "p34") so it is
+    // always visible; the item text gets the remaining space and is ellipsized
+    // when too long
     Rect rcText = rc;
     bool hasRight = rightStr && rightStr.s[0];
     int rightW = 0;
     if (hasRight) {
         int gap = DpiScale(8);
         rightW = gfx->MeasureText(rightStr, rightFont).dx;
-        if (data->filePath) {
-            int nameW = gfx->MeasureText(itemText, lb->font).dx;
-            int minDir = DpiScale(80);
-            int maxRight = rc.dx - nameW - gap;
-            if (maxRight < minDir) {
-                hasRight = false;
-                rightW = 0;
-            } else if (rightW > maxRight) {
-                rightW = maxRight;
-            }
-        }
-        if (hasRight) {
-            if (isRtl) {
-                rcText.x += rightW + gap;
-                rcText.dx -= rightW + gap;
-            } else {
-                rcText.dx -= rightW + gap;
-            }
+        if (isRtl) {
+            rcText.x += rightW + gap;
+            rcText.dx -= rightW + gap;
+        } else {
+            rcText.dx -= rightW + gap;
         }
     }
 
@@ -2803,9 +2612,6 @@ void CommandPaletteWnd::DrawListBoxItem(VirtListBox::DrawItemEvent* ev) {
             DrawMaybeHighlightedText(gfx, rcRight, rightStr, filterWords, highlighted, colBg, false, false, rightFmt,
                                      rightFont, rightCol);
         } else {
-            if (data->filePath) {
-                rightFmt |= gfxTextPathEllipsis;
-            }
             gfx->DrawText(rightStr, rcRight, rightFmt, rightFont, rightCol);
         }
     }
@@ -2929,18 +2735,14 @@ void CommandPaletteWnd::FilterStringsForQuery(Str filter, StrVecCP& strings) {
         filter = StrL("");
     }
 
-    bool searchTabs = false, searchHistory = false, searchCommands = false, searchToc = false, searchFavorites = false,
-         searchSettings = false, searchAnnotations = false;
+    bool searchTabs = false, searchCommands = false, searchToc = false, searchSettings = false,
+         searchAnnotations = false;
     if (str::TrimPrefix(filter, Str(kPalettePrefixEverything))) {
-        searchTabs = searchHistory = searchCommands = true;
+        searchTabs = searchCommands = true;
     } else if (str::TrimPrefix(filter, Str(kPalettePrefixTabs))) {
         searchTabs = true;
-    } else if (str::TrimPrefix(filter, Str(kPalettePrefixFileHistory))) {
-        searchHistory = true;
     } else if (str::TrimPrefix(filter, Str(kPalettePrefixTOC))) {
         searchToc = true;
-    } else if (str::TrimPrefix(filter, Str(kPalettePrefixFavorites))) {
-        searchFavorites = true;
     } else if (str::TrimPrefix(filter, Str(kPalettePrefixAnnotations))) {
         searchAnnotations = true;
     } else if (str::TrimPrefix(filter, Str(kPalettePrefixBoolSettings))) {
@@ -2989,17 +2791,11 @@ void CommandPaletteWnd::FilterStringsForQuery(Str filter, StrVecCP& strings) {
     if (searchTabs) {
         FilterStrings(tabs, filterWords, strings);
     }
-    if (searchHistory) {
-        FilterStrings(fileHistory, filterWords, strings);
-    }
     if (searchCommands) {
         FilterStrings(commands, filterWords, strings);
     }
     if (searchToc) {
         FilterStrings(toc, filterWords, strings);
-    }
-    if (searchFavorites) {
-        FilterStrings(favorites, filterWords, strings);
     }
     if (searchSettings) {
         FilterStrings(settings, filterWords, strings);

@@ -353,7 +353,7 @@ void pdf_sign_signature(fz_context *ctx, pdf_annot *widget,
 		{
 			info = pdf_format_signature_info(ctx, signer, flags, reason, location, now, &name);
 			if (graphic)
-				dlist = pdf_signature_appearance_signed(ctx, rect, lang, graphic, NULL, info, logo);
+				dlist = pdf_signature_appearance_signed(ctx, rect, lang, graphic, NULL, (info && info[0]) ? info : NULL, logo);
 			else if (flags & PDF_SIGNATURE_SHOW_GRAPHIC_NAME)
 				dlist = pdf_signature_appearance_signed(ctx, rect, lang, NULL, name, info, logo);
 			else
@@ -394,7 +394,7 @@ fz_display_list *pdf_preview_signature_as_display_list(fz_context *ctx,
 	{
 		info = pdf_format_signature_info(ctx, signer, flags, reason, location, now, &name);
 		if (graphic)
-			dlist = pdf_signature_appearance_signed(ctx, rect, lang, graphic, NULL, info, logo);
+			dlist = pdf_signature_appearance_signed(ctx, rect, lang, graphic, NULL, (info && info[0]) ? info : NULL, logo);
 		else if (flags & PDF_SIGNATURE_SHOW_GRAPHIC_NAME)
 			dlist = pdf_signature_appearance_signed(ctx, rect, lang, NULL, name, info, logo);
 		else

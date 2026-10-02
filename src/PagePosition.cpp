@@ -56,8 +56,7 @@ TempStr StoredPagePosFromCtrlTemp(DocController* ctrl) {
 
 // leading "chapter:page" from an engine bookmark ("chapter:page:pagesInChapter
 // [:r<reparseIdx>]"), no engine access. Rough position hint for comparing two
-// bookmarks (e.g. Favorites identity), not a substitute for LookupBookmark's
-// re-pagination scaling
+// bookmarks, not a substitute for LookupBookmark's re-pagination scaling
 Location BookmarkLocationHint(Str bookmark) {
     int chapter = 0;
     int page = 0;
@@ -127,24 +126,13 @@ bool MigrateStoredPagePos(DocController* ctrl, Str* pageNoStr) {
     return true;
 }
 
-// migrates fs->pageNo and any fs->favorites from legacy flat page numbers to
-// "bm:..." bookmarks. Returns true if any value was updated.
+// migrates fs->pageNo from legacy flat page numbers to "bm:..." bookmarks.
+// Returns true if any value was updated.
 bool MigrateFileStatePagePos(DocController* ctrl, FileState* fs) {
     if (!ctrl || !ctrl->HasChapters() || !fs) {
         return false;
     }
-    bool changed = false;
-    if (MigrateStoredPagePos(ctrl, &fs->pageNo)) {
-        changed = true;
-    }
-    if (fs->favorites) {
-        for (Favorite* fav : *fs->favorites) {
-            if (MigrateStoredPagePos(ctrl, &fav->pageNo)) {
-                changed = true;
-            }
-        }
-    }
-    return changed;
+    return MigrateStoredPagePos(ctrl, &fs->pageNo);
 }
 
 // chapter + page in the toolbar and Go to Page. Off: one page number for the book.

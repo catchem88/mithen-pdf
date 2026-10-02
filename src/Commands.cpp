@@ -124,8 +124,6 @@ static SeqStrings gCommandNames =
     "CmdOpenWithHtmlHelp\0"
     "CmdOpenWithPdfDjvuBookmarker\0"
     "CmdOpenSelectedDocument\0"
-    "CmdPinSelectedDocument\0"
-    "CmdForgetSelectedDocument\0"
     "CmdExpandAll\0"
     "CmdCollapseAll\0"
     "CmdSaveEmbeddedFile\0"
@@ -134,20 +132,11 @@ static SeqStrings gCommandNames =
     "CmdOpenAttachment\0"
     "CmdOptions\0"
     "CmdAdvancedSettings\0"
-    "CmdChangeLanguage\0"
-    "CmdCheckUpdate\0"
-    "CmdInstallPrereleaseUpdate\0"
     "CmdTogglePdfPreviewLogging\0"
-    "CmdHelpOpenManual\0"
-    "CmdHelpOpenManualOnWebsite\0"
-    "CmdHelpOpenKeyboardShortcuts\0"
     "CmdToggleKeyboardHelp\0"
     "CmdHelpVisitWebsite\0"
     "CmdHelpAbout\0"
     "CmdMoveFrameFocus\0"
-    "CmdFavoriteAdd\0"
-    "CmdFavoriteDel\0"
-    "CmdFavoriteToggle\0"
     "CmdToggleLinks\0"
     "CmdToggleShowAnnotations\0"
     "CmdShowAnnotations\0"
@@ -181,8 +170,6 @@ static SeqStrings gCommandNames =
     "CmdCommandPalette\0"
     "CmdShowLog\0"
     "CmdShowErrors\0"
-    "CmdClearHistory\0"
-    "CmdReopenLastClosedFile\0"
     "CmdNextTab\0"
     "CmdPrevTab\0"
     "CmdNextTabSmart\0"
@@ -232,24 +219,14 @@ static SeqStrings gCommandNames =
     "CmdReadAloudFromTopPage\0"
     "CmdReadAloudSelection\0"
     "CmdToggleToolbarShowReadAloud\0"
-    "CmdRemoveDeletedFilesFromHistory\0"
     "CmdCommandPaletteTOC\0"
     "CmdDebugToggleRenderInfo\0"
     "CmdConvertImageToPdf\0"
     "CmdExpandToCurrentPage\0"
     "CmdStartAutoScroll\0"
-    "CmdAIChatWithClaudeCode\0"
-    "CmdAIChatWithGrokBuild\0"
-    "CmdAIChatWithOpenAICodex\0"
-    "CmdTranslateSelectionWithGrokBuild\0"
-    "CmdTranslateSelectionWithClaudeCode\0"
-    "CmdTranslateSelectionWithOpenAICodex\0"
     "CmdFindToggleMatchWholeWord\0"
-    "CmdGoToNextFavorite\0"
-    "CmdGoToPrevFavorite\0"
     "CmdCreateAnnotImageFromClipboard\0"
     "CmdSetInverseSearch\0"
-    "CmdCommandPaletteFavorites\0"
     "CmdNavigateFilesInFolder\0"
     "CmdDebugToggleCacheInfo\0"
     "CmdToggleEngineeringDrawingEnhance\0"
@@ -258,12 +235,10 @@ static SeqStrings gCommandNames =
     "CmdToggleLightDarkTheme\0"
     "CmdChangeTheme\0"
     "CmdTranslateSelection\0"
-    "CmdFavoriteShowInTab\0"
     "CmdTocExpandToLevel1\0"
     "CmdTocExpandToLevel2\0"
     "CmdTocExpandToLevel3\0"
     "CmdTocCollapseSameLevel\0"
-    "CmdToggleFavoritesSort\0"
     "CmdZoomFitHeight\0"
     "CmdDeleteFileAndOpenNext\0"
     "CmdShowGeneratedHTML\0"
@@ -276,8 +251,6 @@ static SeqStrings gCommandNames =
     "CmdToggleFilePicker\0"
     "CmdToggleBoolSetting\0"
     "CmdFixDefaultApp\0"
-    "CmdAIChatWithAntiGravity\0"
-    "CmdTranslateSelectionWithAntiGravity\0"
     "CmdConvertToPDF\0"
     "CmdDebugShowFitContentArea\0"
     "CmdExtendSelectionCharLeft\0"
@@ -309,7 +282,6 @@ static SeqStrings gCommandNames =
     "CmdShowAnnotationText\0"
     "CmdAnnotationHighlightBrush\0"
     "CmdFindAnnotation\0"
-    "CmdOpenFileNoHistory\0"
     "CmdCopySelectionAsImage\0"
     "CmdSearchGoogleLensPage\0"
     "CmdSearchGoogleLensImage\0"
@@ -324,8 +296,6 @@ static SeqStrings gCommandNames =
     "CmdGoToHomePage\0"
     "CmdToggleFreePan\0"
     "CmdNone\0"
-    "CmdFileHistory\0"
-    "CmdFavorite\0"
     "CmdReadAloudFromCursorPosition\0"
     "CmdToggleGrayscale\0"
     "CmdPrintSelection\0"
@@ -449,8 +419,6 @@ static i32 gCommandIds[] = {
     CmdOpenWithHtmlHelp,
     CmdOpenWithPdfDjvuBookmarker,
     CmdOpenSelectedDocument,
-    CmdPinSelectedDocument,
-    CmdForgetSelectedDocument,
     CmdExpandAll,
     CmdCollapseAll,
     CmdSaveEmbeddedFile,
@@ -459,20 +427,11 @@ static i32 gCommandIds[] = {
     CmdOpenAttachment,
     CmdOptions,
     CmdAdvancedSettings,
-    CmdChangeLanguage,
-    CmdCheckUpdate,
-    CmdInstallPrereleaseUpdate,
     CmdTogglePdfPreviewLogging,
-    CmdHelpOpenManual,
-    CmdHelpOpenManualOnWebsite,
-    CmdHelpOpenKeyboardShortcuts,
     CmdToggleKeyboardHelp,
     CmdHelpVisitWebsite,
     CmdHelpAbout,
     CmdMoveFrameFocus,
-    CmdFavoriteAdd,
-    CmdFavoriteDel,
-    CmdFavoriteToggle,
     CmdToggleLinks,
     CmdToggleShowAnnotations,
     CmdShowAnnotations,
@@ -506,8 +465,6 @@ static i32 gCommandIds[] = {
     CmdCommandPalette,
     CmdShowLog,
     CmdShowErrors,
-    CmdClearHistory,
-    CmdReopenLastClosedFile,
     CmdNextTab,
     CmdPrevTab,
     CmdNextTabSmart,
@@ -557,24 +514,14 @@ static i32 gCommandIds[] = {
     CmdReadAloudFromTopPage,
     CmdReadAloudSelection,
     CmdToggleToolbarShowReadAloud,
-    CmdRemoveDeletedFilesFromHistory,
     CmdCommandPaletteTOC,
     CmdDebugToggleRenderInfo,
     CmdConvertImageToPdf,
     CmdExpandToCurrentPage,
     CmdStartAutoScroll,
-    CmdAIChatWithClaudeCode,
-    CmdAIChatWithGrokBuild,
-    CmdAIChatWithOpenAICodex,
-    CmdTranslateSelectionWithGrokBuild,
-    CmdTranslateSelectionWithClaudeCode,
-    CmdTranslateSelectionWithOpenAICodex,
     CmdFindToggleMatchWholeWord,
-    CmdGoToNextFavorite,
-    CmdGoToPrevFavorite,
     CmdCreateAnnotImageFromClipboard,
     CmdSetInverseSearch,
-    CmdCommandPaletteFavorites,
     CmdNavigateFilesInFolder,
     CmdDebugToggleCacheInfo,
     CmdToggleEngineeringDrawingEnhance,
@@ -583,12 +530,10 @@ static i32 gCommandIds[] = {
     CmdToggleLightDarkTheme,
     CmdChangeTheme,
     CmdTranslateSelection,
-    CmdFavoriteShowInTab,
     CmdTocExpandToLevel1,
     CmdTocExpandToLevel2,
     CmdTocExpandToLevel3,
     CmdTocCollapseSameLevel,
-    CmdToggleFavoritesSort,
     CmdZoomFitHeight,
     CmdDeleteFileAndOpenNext,
     CmdShowGeneratedHTML,
@@ -601,8 +546,6 @@ static i32 gCommandIds[] = {
     CmdToggleFilePicker,
     CmdToggleBoolSetting,
     CmdFixDefaultApp,
-    CmdAIChatWithAntiGravity,
-    CmdTranslateSelectionWithAntiGravity,
     CmdConvertToPDF,
     CmdDebugShowFitContentArea,
     CmdExtendSelectionCharLeft,
@@ -634,7 +577,6 @@ static i32 gCommandIds[] = {
     CmdShowAnnotationText,
     CmdAnnotationHighlightBrush,
     CmdFindAnnotation,
-    CmdOpenFileNoHistory,
     CmdCopySelectionAsImage,
     CmdSearchGoogleLensPage,
     CmdSearchGoogleLensImage,
@@ -649,8 +591,6 @@ static i32 gCommandIds[] = {
     CmdGoToHomePage,
     CmdToggleFreePan,
     CmdNone,
-    CmdFileHistory,
-    CmdFavorite,
     CmdReadAloudFromCursorPosition,
     CmdToggleGrayscale,
     CmdPrintSelection,
@@ -774,8 +714,6 @@ SeqStrings gCommandDescriptions =
     "Open in Microsoft HTML Help\0"
     "Open With Pdf&Djvu Bookmarker\0"
     "Open Selected Document\0"
-    "Pin Selected Document\0"
-    "Remove Selected Document From History\0"
     "Expand All\0"
     "Collapse All\0"
     "Save Embedded File...\0"
@@ -784,20 +722,11 @@ SeqStrings gCommandDescriptions =
     "Open Attachment\0"
     "Settings...\0"
     "Advanced Settings...\0"
-    "Change Language...\0"
-    "Check For Updates\0"
-    "Install Pre-release Update\0"
     "Toggle PDF Preview Logging\0"
-    "Help: Manual\0"
-    "Help: Manual On Website\0"
-    "Help: Keyboard Shortcuts\0"
     "Show Keyboard Shortcuts\0"
-    "Help: SumatraPDF Website\0"
-    "Help: About SumatraPDF...\0"
+    "Help: MithenPDF GitHub\0"
+    "Help: About MithenPDF...\0"
     "Move Frame Focus\0"
-    "Add Favorite\0"
-    "Delete Favorite\0"
-    "Toggle Favorites\0"
     "Toggle Show Links\0"
     "Toggle Show Annotations\0"
     "Show Annotations\0"
@@ -831,8 +760,6 @@ SeqStrings gCommandDescriptions =
     "Command Palette\0"
     "Show Logs\0"
     "Show Errors...\0"
-    "Clear History\0"
-    "Reopen Last Closed\0"
     "Next Tab\0"
     "Previous Tab\0"
     "Smart Next Tab\0"
@@ -882,24 +809,14 @@ SeqStrings gCommandDescriptions =
     "Start Reading From Top\0"
     "Start Reading Selection\0"
     "Read Aloud: Show In Toolbar\0"
-    "Remove Deleted Files From History\0"
     "Command Palette: Table Of Contents\0"
     "Debug: Toggle Render Queue Info\0"
     "Convert Image To PDF...\0"
     "Expand TOC to Current Page\0"
     "Start Auto-Scroll\0"
-    "Claude chat...\0"
-    "Grok chat...\0"
-    "Codex chat...\0"
-    "Translate Selection with Grok Build...\0"
-    "Translate Selection with Claude Code...\0"
-    "Translate Selection with OpenAI Codex...\0"
     "Find: Toggle Match Whole Word\0"
-    "Go to Next Favorite\0"
-    "Go to Previous Favorite\0"
     "Create Image Annotation From Clipboard\0"
     "Set Inverse Search Command Line...\0"
-    "Command Palette: Favorites\0"
     "Navigate Files in Folder...\0"
     "Debug: Toggle Cache Info\0"
     "Toggle Engineering Drawing Enhancement\0"
@@ -908,12 +825,10 @@ SeqStrings gCommandDescriptions =
     "Toggle Light/Dark Theme\0"
     "Change Theme...\0"
     "Translate Selection...\0"
-    "Show Favorites in Tab\0"
     "Bookmarks: Expand to Level 1\0"
     "Bookmarks: Expand to Level 2\0"
     "Bookmarks: Expand to Level 3\0"
     "Bookmarks: Collapse Same Level\0"
-    "Sort Favorites By Name\0"
     "Zoom: Fit Height\0"
     "Delete File And Open Next\0"
     "Show Generated HTML\0"
@@ -923,11 +838,9 @@ SeqStrings gCommandDescriptions =
     "Toggle Show Images\0"
     "Select Text With Keyboard\0"
     "Open File With Windows File Picker...\0"
-    "SumatraPDF File Picker\0"
+    "MithenPDF File Picker\0"
     "Toggle Boolean Setting\0"
     "Fix Default App For Extension\0"
-    "Antigravity chat...\0"
-    "Translate Selection with Antigravity...\0"
     "Convert To PDF...\0"
     "Debug: Show Fit Content Area\0"
     "Extend Selection One Character Left\0"
@@ -959,7 +872,6 @@ SeqStrings gCommandDescriptions =
     "Show Comment\0"
     "Highlighter\0"
     "Find Annotation\0"
-    "Open File Without History...\0"
     "Copy Selection As Image\0"
     "Search Page with Google Lens\0"
     "Search Image with Google Lens\0"
@@ -974,14 +886,12 @@ SeqStrings gCommandDescriptions =
     "Go To Home Page\0"
     "Toggle Free Pan\0"
     "Do nothing\0"
-    "Open Recent File\0"
-    "Go to Favorite\0"
     "Start Reading From Cursor Position\0"
     "Toggle Grayscale\0"
     "Print Selection...\0"
     "Generate Table Of Contents\0"
     "Open Advanced Settings File...\0"
-    "Open File With SumatraPDF File Picker...\0"
+    "Open File With MithenPDF File Picker...\0"
     "Select Current Page\0"
     "Zoom: Fit Visible\0"
     "Sign With Image\0"
@@ -1060,13 +970,6 @@ static const ArgSpec argSpecs[] = {
 
     // extension including leading dot, e.g. [CmdFixDefaultApp .pdf]
     {CmdFixDefaultApp, kCmdArgExt, CommandArg::Type::String}, // default
-
-    // a recent file in the File menu, e.g. [CmdFileHistory C:\dir\file.pdf]
-    {CmdFileHistory, kCmdArgFilePath, CommandArg::Type::String}, // default
-
-    // a favorite in the Favorites menu, e.g. [CmdFavorite C:\dir\file.pdf page=3]
-    {CmdFavorite, kCmdArgFilePath, CommandArg::Type::String}, // default
-    {CmdFavorite, kCmdArgPage, CommandArg::Type::String},
 
     {CmdNone, StrL(""), CommandArg::Type::None}, // sentinel
 };

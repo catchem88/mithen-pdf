@@ -1,0 +1,33 @@
+source/pdf/pdf-signature.c: image-only signature appearance when no text is wanted
+
+When no text bits (name / DN / date) and no reason / location are enabled,
+pdf_signature_info() returns an empty string instead of NULL. That non-null
+empty right_text made pdf_signature_appearance_signed() reserve the right
+half of the field for text, shrinking the image into the left half. Treat an
+empty info string like none: the image then fills the whole signature field.
+
+MithenPDF signs with a required image and all the Show... checkboxes off, so
+the signature is exactly the image and no text.
+---
+diff --git a/source/pdf/pdf-signature.c b/source/pdf/pdf-signature.c
+index 2f6acb767..571468745 100644
+--- a/source/pdf/pdf-signature.c
++++ b/source/pdf/pdf-signature.c
+@@ -353,7 +353,7 @@ void pdf_sign_signature(fz_context *ctx, pdf_annot *widget,
+ 		{
+ 			info = pdf_format_signature_info(ctx, signer, flags, reason, location, now, &name);
+ 			if (graphic)
+-				dlist = pdf_signature_appearance_signed(ctx, rect, lang, graphic, NULL, info, logo);
++				dlist = pdf_signature_appearance_signed(ctx, rect, lang, graphic, NULL, (info && info[0]) ? info : NULL, logo);
+ 			else if (flags & PDF_SIGNATURE_SHOW_GRAPHIC_NAME)
+ 				dlist = pdf_signature_appearance_signed(ctx, rect, lang, NULL, name, info, logo);
+ 			else
+@@ -394,7 +394,7 @@ fz_display_list *pdf_preview_signature_as_display_list(fz_context *ctx,
+ 	{
+ 		info = pdf_format_signature_info(ctx, signer, flags, reason, location, now, &name);
+ 		if (graphic)
+-			dlist = pdf_signature_appearance_signed(ctx, rect, lang, graphic, NULL, info, logo);
++			dlist = pdf_signature_appearance_signed(ctx, rect, lang, graphic, NULL, (info && info[0]) ? info : NULL, logo);
+ 		else if (flags & PDF_SIGNATURE_SHOW_GRAPHIC_NAME)
+ 			dlist = pdf_signature_appearance_signed(ctx, rect, lang, NULL, name, info, logo);
+ 		else

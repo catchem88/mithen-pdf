@@ -118,6 +118,7 @@ static ToolbarButtonInfo gPdfAnnotationButtons[] = {
     {gIconApplyRedactions, CmdApplyRedactions, TrN("Apply Redactions")},
     {gIconAnnotStamp, CmdCreateAnnotStamp, TrN("Stamp")},
     {gIconAnnotCaret, CmdCreateAnnotCaret, TrN("Caret")},
+    {gIconInsertImage, CmdInsertImage, TrN("Insert Image")},
     {gIconAnnotFileAttachment, CmdCreateAnnotFileAttachment, TrN("File Attachment")},
     {nullptr, 0, {}},
     {gIconUndo, CmdUndo, TrN("Undo")},
@@ -491,7 +492,6 @@ static bool IsCmdEnabled(MainWindow* win, int cmdId, AppCommandCtx* ctx) {
     }
     switch (cmdId) {
         case CmdOpenFile:
-        case CmdOpenFileNoHistory:
             if (!CanAccessDisk()) {
                 return false;
             }
@@ -512,7 +512,6 @@ static bool IsCmdEnabled(MainWindow* win, int cmdId, AppCommandCtx* ctx) {
 
     switch (cmdId) {
         case CmdOpenFile:
-        case CmdOpenFileNoHistory:
             // opening different files isn't allowed in plugin mode
             return !gPluginMode;
 

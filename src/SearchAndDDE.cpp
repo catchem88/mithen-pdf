@@ -34,7 +34,6 @@
 #include "Toolbar.h"
 #include "FindBar.h"
 #include "FindWindow.h"
-#include "Favorites.h"
 #include "Translations.h"
 #include "Version.h"
 #include "SearchAndDDE.h"
@@ -146,16 +145,15 @@ static DocController* BrowserFindCtrl(MainWindow* win) {
     return nullptr;
 }
 
-// A find session's first real search records the view it starts from: as the
-// session-only "/" favorite (#5862) and as a nav point, so Back returns there
-// even after find-as-you-type moved through intermediate matches (#6230).
+// A find session's first real search records the view it starts from as a nav
+// point, so Back returns there even after find-as-you-type moved through
+// intermediate matches (#6230).
 // The session ends when the find UI is closed or reopened from the document.
 static void MarkSearchStart(MainWindow* win) {
     if (win->searchStartMarked) {
         return;
     }
     win->searchStartMarked = true;
-    SetSearchStartFavorite(win);
     if (DisplayModel* dm = win->AsFixed()) {
         dm->AddNavPoint();
     }
@@ -367,10 +365,10 @@ bool NeedsFindUI(MainWindow* win) {
 }
 
 void FindFirst(MainWindow* win) {
-    // Only open/focus the find UI here. The search-start favorite ("/") is set
+    // Only open/focus the find UI here. The search start nav point is marked
     // when a real search begins (non-empty term in FindTextOnThread /
     // BrowserFindStartSearch), not merely when the find box is opened
-    // (issue #5862 / #5726).
+    // (issue #5726).
     if (!win) {
         return;
     }

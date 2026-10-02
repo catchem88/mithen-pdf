@@ -47,6 +47,7 @@ const user32 = dlopen("user32.dll", {
   GetWindowRect: { args: [FFIType.ptr, FFIType.ptr], returns: FFIType.bool },
   IsWindowVisible: { args: [FFIType.ptr], returns: FFIType.bool },
   IsWindowEnabled: { args: [FFIType.ptr], returns: FFIType.bool },
+  SetFocus: { args: [FFIType.ptr], returns: FFIType.u64 },
   WindowFromPoint: { args: [FFIType.i64], returns: FFIType.u64 },
   GetAncestor: { args: [FFIType.ptr, FFIType.u32], returns: FFIType.u64 },
   SetForegroundWindow: { args: [FFIType.ptr], returns: FFIType.bool },
@@ -81,6 +82,7 @@ const user32 = dlopen("user32.dll", {
   GetSubMenu: { args: [FFIType.u64, FFIType.i32], returns: FFIType.u64 },
   GetMenuStringW: { args: [FFIType.u64, FFIType.u32, FFIType.ptr, FFIType.i32, FFIType.u32], returns: FFIType.i32 },
   GetMenuState: { args: [FFIType.u64, FFIType.u32, FFIType.u32], returns: FFIType.u32 },
+  GetMenu: { args: [FFIType.u64], returns: FFIType.u64 },
 });
 
 // GDI + GDI+ for capturing a window to a PNG (see captureWindowToPng). Capturing
@@ -931,6 +933,10 @@ export function isWindowVisible(hwnd: number): boolean {
   return user32.symbols.IsWindowVisible(hwnd);
 }
 
+export function setFocus(hwnd: number): number {
+  return user32.symbols.SetFocus(hwnd);
+}
+
 export function isWindowEnabled(hwnd: number): boolean {
   return user32.symbols.IsWindowEnabled(hwnd);
 }
@@ -1692,6 +1698,11 @@ export function getPopupMenuHandle(hwndPopup: number): bigint {
 
 export function getMenuItemCount(hmenu: bigint): number {
   return user32.symbols.GetMenuItemCount(hmenu);
+}
+
+// menu handle of the window's menubar (0 if none)
+export function getMenuHandle(hwnd: number): bigint {
+  return BigInt(user32.symbols.GetMenu(BigInt(hwnd)));
 }
 
 // command id of the item at `pos`, 0 if it's a separator or a submenu

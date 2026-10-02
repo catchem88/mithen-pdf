@@ -40,9 +40,8 @@ static void OnPaintAbout(MainWindow* win) {
         DrawHomePage(win, gfx);
     } else {
         HomePageHideSearch(win);
-        // DrawAboutPage swaps the canvas root's child from the home page's
-        // chrome to the About page's controls
-        DrawAboutPage(win, gfx);
+        // MithenPDF: a window without content is blank
+        gfx->FillRect(HwndClientRect(win->hwndCanvas), ThemeMainWindowBackgroundColor());
     }
     delete gfx;
     win->buffer->Flush(hdc);
@@ -66,11 +65,10 @@ static void OnMouseRightButtonDownAbout(MainWindow* win, int x, int y, WPARAM /*
 }
 
 static void OnMouseRightButtonUpAbout(MainWindow* win, int x, int y, WPARAM /*key*/) {
-    int isDrag = IsDragDistance(x, win->dragStart.x, y, win->dragStart.y);
-    if (isDrag) {
-        return;
-    }
-    OnAboutContextMenu(win, x, y);
+    // right-click drag pans the page; without a context menu the drag end does nothing
+    (void)win;
+    (void)x;
+    (void)y;
 }
 
 static LRESULT OnSetCursorAbout(MainWindow* win, HWND hwnd) {
@@ -140,14 +138,6 @@ LRESULT WndProcCanvasAbout(MainWindow* win, HWND hwnd, UINT msg, WPARAM wp, LPAR
                     StartLoadDocument(&args);
                     return 0;
                 }
-                case VK_DELETE: {
-                    // remove the keyboard-selected entry from file history (not from disk)
-                    Str path = HomePageSelectedFilePathTemp(win);
-                    if (path) {
-                        ForgetFileFromFrequentlyRead(win, path);
-                    }
-                    return 0;
-                }
             }
             break;
 
@@ -172,10 +162,6 @@ LRESULT WndProcCanvasAbout(MainWindow* win, HWND hwnd, UINT msg, WPARAM wp, LPAR
                 return TRUE;
             }
             return DefWindowProc(hwnd, msg, wp, lp);
-
-        case WM_CONTEXTMENU:
-            OnAboutContextMenu(win, 0, 0);
-            return 0;
 
         case WM_PAINT:
             if (gRedrawLog) {

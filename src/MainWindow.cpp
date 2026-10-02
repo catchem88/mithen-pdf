@@ -35,8 +35,6 @@
 #include "TextSelection.h"
 #include "TextSearch.h"
 #include "SumatraPDF.h"
-#include "AIChatCommon.h"
-#include "AIChatPanel.h"
 #include "SelectionToolbar.h"
 #include "AnnotEditToolbar.h"
 #include "AnnotTextPopup.h"
@@ -207,7 +205,6 @@ MainWindow::~MainWindow() {
     delete linkHandler;
     delete buffer;
     delete tabSelectionHistory;
-    ShutdownAIChatForMainWindow(this);
     auto tabs = Tabs();
     DeleteVecMembers(tabs);
     {
@@ -237,14 +234,6 @@ MainWindow::~MainWindow() {
     delete tocLayout;
     delete tocRoot;
     delete tocFilteredTree;
-    if (favTreeView) {
-        delete favTreeView->treeModel;
-    }
-    // favLayout (VBox) owns the header, favFilterEdit and favTreeView
-    delete favLayout;
-    delete favRoot;
-
-    DestroyAIChatPanel(this);
 
     // owns chrome, the content row, the splitters and the slots
     delete chromeLayout;
@@ -1056,14 +1045,6 @@ void UpdateControlsColors(MainWindow* win) {
     }
 
     HomePageUpdateSearchColors(win);
-
-    auto* favTreeView = win->favTreeView;
-    if (favTreeView) {
-        favTreeView->SetColors(txtCol, bgCol);
-        if (win->favFilterEdit) {
-            win->favFilterEdit->SetColors(txtCol, bgCol);
-        }
-    }
 }
 
 bool IsRightDragging(MainWindow* win) {

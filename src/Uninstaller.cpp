@@ -102,6 +102,30 @@ static void RemoveInstallDirFromPath(bool allUsers, Str installDir) {
     SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0, (LPARAM)L"Environment", SMTO_ABORTIFHUNG, 5000, nullptr);
 }
 
+// Files still locked after RemoveAll (the app's own DLLs are loaded by this
+// uninstaller, so Windows won't delete them now) are scheduled for deletion on
+// the next reboot, like the running exe. Otherwise they'd be left behind.
+static void ScheduleRemainingFilesForRebootDelete(Str dir) {
+    TempStr pattern = path::JoinTemp(dir, StrL("*"));
+    WIN32_FIND_DATAW fd{};
+    HANDLE h = FindFirstFileW(CWStrTemp(pattern), &fd);
+    if (h == INVALID_HANDLE_VALUE) {
+        return;
+    }
+    do {
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            continue;
+        }
+        TempStr p = path::JoinTemp(dir, ToUtf8Temp(WStr(fd.cFileName)));
+        if (MoveFileExW(CWStrTemp(p), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT)) {
+            logf("Uninstaller: scheduled '%s' for deletion on reboot\n", p);
+        } else {
+            logf("Uninstaller: failed to schedule '%s' for deletion\n", p);
+        }
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+}
+
 static void RemoveInstalledFiles() {
     // can't use GetExistingInstallationDir() anymore because we
     // delete registry entries
@@ -120,6 +144,9 @@ static void RemoveInstalledFiles() {
 #endif
     bool ok = dir::RemoveAll(dir);
     logf("RemoveInstalledFiles(): removed dir '%s', ok = %d\n", dir, (int)ok);
+    if (dir::Exists(dir)) {
+        ScheduleRemainingFilesForRebootDelete(dir);
+    }
 }
 
 static TempStr GetInstalledExePathTemp() {
@@ -159,6 +186,39 @@ static void UninstallerThread() {
     LoggedDeleteRegValue(HKEY_CURRENT_USER, StrL("Software\\Microsoft\\Windows\\CurrentVersion\\Run"),
                          StrL("SumatraPDF-QuickLook"));
 
+    // uninstall must leave nothing behind: drop settings and the app data dirs
+    StrVec settingsPaths;
+    TempStr localDir = GetSpecialFolderTemp(CSIDL_LOCAL_APPDATA, false);
+    TempStr appDir = GetSpecialFolderTemp(CSIDL_APPDATA, false);
+    if (len(localDir) > 0) {
+        settingsPaths.Append(path::JoinTemp(localDir, StrL("MithenPDF"), StrL("MithenPDF-settings.txt")));
+        settingsPaths.Append(path::JoinTemp(localDir, StrL("SumatraPDF"), StrL("SumatraPDF-settings.txt")));
+        settingsPaths.Append(path::JoinTemp(localDir, StrL("MithenPDF-log")));
+    }
+    if (len(appDir) > 0) {
+        settingsPaths.Append(path::JoinTemp(appDir, StrL("SumatraPDF"), StrL("SumatraPDF-settings.txt")));
+    }
+    for (Str p : settingsPaths) {
+        if (file::Exists(p)) {
+            bool deleted = file::Delete(p);
+            logf("RemoveSettings: %s '%s'\n", deleted ? StrL("deleted") : StrL("FAILED to delete"), p);
+        }
+    }
+    StrVec dataDirs;
+    if (len(localDir) > 0) {
+        dataDirs.Append(path::JoinTemp(localDir, StrL("MithenPDF")));
+        dataDirs.Append(path::JoinTemp(localDir, StrL("SumatraPDF")));
+    }
+    if (len(appDir) > 0) {
+        dataDirs.Append(path::JoinTemp(appDir, StrL("SumatraPDF")));
+    }
+    for (Str d : dataDirs) {
+        if (dir::Exists(d)) {
+            bool removed = dir::RemoveAll(d);
+            logf("RemoveSettings: %s '%s'\n", removed ? StrL("removed") : StrL("FAILED to remove"), d);
+        }
+    }
+
     // always succeed, even for partial uninstallations
     success = true;
 
@@ -192,7 +252,7 @@ static void OnUninstallationFinished() {
     gButtonUninstaller = nullptr;
     gButtonExit = CreateDefaultButton(gHwndFrame, Tr("Close"), isRtl);
     gButtonExit->onClick = MkFunc0Void(OnButtonExit);
-    SetMsg(Tr("SumatraPDF has been uninstalled."), gMsgError ? kColorMsgFailed : kColorMsgOk);
+    SetMsg(Tr("MithenPDF has been uninstalled."), gMsgError ? kColorMsgFailed : kColorMsgOk);
     gMsgError = gFirstError;
     HwndRepaintNow(gHwndFrame);
 
@@ -214,7 +274,7 @@ static bool UninstallerOnWmCommand(WPARAM wp) {
 constexpr const WCHAR* kInstallerWindowClassName = L"SUMATRA_PDF_INSTALLER_FRAME";
 
 static void CreateUninstallerWindow() {
-    TempStr title = fmt(Tr("SumatraPDF %s Uninstaller").s, StrL(CURR_VERSION_STRA));
+    TempStr title = fmt(Tr("MithenPDF %s Uninstaller").s, StrL(CURR_VERSION_STRA));
     int x = CW_USEDEFAULT;
     int y = CW_USEDEFAULT;
     int dx = GetInstallerWinDx();
@@ -229,7 +289,7 @@ static void CreateUninstallerWindow() {
     HwndResizeClientSize(gHwndFrame, dx, dy);
 
     auto isRtl = IsUIRtl();
-    gButtonUninstaller = CreateDefaultButton(gHwndFrame, Tr("Uninstall SumatraPDF"), isRtl);
+    gButtonUninstaller = CreateDefaultButton(gHwndFrame, Tr("Uninstall MithenPDF"), isRtl);
     gButtonUninstaller->onClick = MkFunc0Void(OnButtonUninstall);
 }
 
@@ -486,6 +546,23 @@ static void RelaunchMaybeElevatedFromTempDirectory(Flags* cli) {
         logf("  failed to copy installer\n");
         return;
     }
+    // Also copy the app's DLLs next to the temp exe. Otherwise the temp
+    // uninstaller loads them from the install dir, keeping them locked and
+    // leaving them (and the folder) behind after RemoveAll.
+    {
+        TempStr srcDir = path::GetDirTemp(ownPath);
+        TempStr dstDir = path::GetDirTemp(installerTempPath);
+        Str dlls[] = {StrL("libsumatrapdf.dll"), StrL("PdfPreview.dll"), StrL("PdfFilter.dll"),
+                      StrL("sumatrapdf-tool.exe")};
+        for (Str n : dlls) {
+            TempStr src = path::JoinTemp(srcDir, n);
+            if (!file::Exists(src)) {
+                continue;
+            }
+            TempStr dst = path::JoinTemp(dstDir, n);
+            file::Copy(dst, src, true);
+        }
+    }
     logf("LaunchProcessWithCmdLine('%s' '%s')\n", installerTempPath, cl);
     HANDLE h = LaunchProcessWithCmdLine(installerTempPath, cl);
     if (!h) {
@@ -534,7 +611,12 @@ static void InitSelfDelete() {
     // is not supported" whenever stdin isn't a console, which is exactly what a
     // child of a windowless process gets - the del then ran while we were still
     // running and failed. 3 pings to loopback is ~2s, enough for us to exit.
-    TempStr cmdLine = fmt("\"%s\" /C ping -n 3 127.0.0.1 >nul & del \"%s\"", cmdExe, exePath);
+    // `rd` removes the now-empty install folder (RemoveInstalledFiles couldn't,
+    // it still held this running exe); it only removes an empty dir so files
+    // the user added survive.
+    TempStr dirName = path::GetDirTemp(exePath);
+    TempStr cmdLine =
+        fmt("\"%s\" /C ping -n 3 127.0.0.1 >nul & del /Q \"%s\" & rd \"%s\" 2>nul", cmdExe, exePath, dirName);
     logf("InitSelfDelete(): '%s'\n", cmdLine);
     HANDLE h = LaunchProcessInDir(cmdLine, {}, CREATE_NO_WINDOW);
     if (!h) {
@@ -557,7 +639,7 @@ int RunUninstaller() {
         if (uninstallerLogPath) {
             StartLogToFile(uninstallerLogPath, false);
         }
-        logf("------------- Starting SumatraPDF uninstallation\n");
+        logf("------------- Starting MithenPDF uninstallation\n");
     }
 
     // TODO: remove dependency on this in the uninstaller
@@ -573,7 +655,7 @@ int RunUninstaller() {
     if (!installerExists) {
         log(StrL("Uninstaller executable doesn't exist\n"));
         auto caption = Tr("Uninstallation failed");
-        auto msg = Tr("SumatraPDF installation not found.");
+        auto msg = Tr("MithenPDF installation not found.");
         MsgBox(nullptr, msg, caption, MB_ICONEXCLAMATION | MB_OK);
         goto Exit;
     }
@@ -595,7 +677,7 @@ int RunUninstaller() {
         log(StrL("Previewer is installed\n"));
     }
 
-    gDefaultMsg = Tr("Are you sure you want to uninstall SumatraPDF?");
+    gDefaultMsg = Tr("Are you sure you want to uninstall MithenPDF?");
 
     // unregister search filter and previewer to reduce
     // possibility of blocking
@@ -609,6 +691,7 @@ int RunUninstaller() {
     if (gCli->silent) {
         UninstallerThread();
         ret = success ? 0 : 1;
+        InitSelfDelete();
         goto Exit;
     }
 

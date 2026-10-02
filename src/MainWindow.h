@@ -285,58 +285,15 @@ struct MainWindow { // NOLINT(clang-analyzer-optin.performance.Padding)
     // tree still has a single selection (the best match). Cleared with the TOC.
     Vec<TocItem*> tocMatchingItems;
     // width of the toc/favorites sidebar; the source of truth for layout
-    // (the toc box window can be hidden and its rect stale, e.g. when only
-    // favorites are showing). 0 = not laid out yet
+    // (the toc box window can be hidden and its rect stale). 0 = not laid out yet
     int sidebarDx = 0;
     // extra frame width added so showing the sidebar does not shrink the canvas
     int sidebarGrewFrameDx = 0;
-
-    // state related to favorites
-    HWND hwndFavBox = nullptr;
-    VirtText* favLabel = nullptr;
-    VirtCloseButton* favCloseBtn = nullptr;
-    VirtRoot* favRoot = nullptr;
-    Edit* favFilterEdit = nullptr;
-    TreeView* favTreeView = nullptr;
-    // VBox(label, filter edit, tree); owns those controls and lays them out in hwndFavBox
-    ILayout* favLayout = nullptr;
-    Vec<FileState*> expandedFavorites;
-
-    // AI chat sidebar (right side); a single set of controls shared by all
-    // providers (Claude Code, Grok Build, OpenAI Codex), see AIChatPanel.cpp
-    HWND hwndAiChatBox = nullptr;
-    UINT_PTR aiChatBoxSubclassId = 0;
-    VirtText* aiChatLabel = nullptr;
-    // HBox(label, close button), the panel's header row
-    HBox* aiChatHeader = nullptr;
-    VirtRoot* aiChatRoot = nullptr;
-    DropDown* aiChatSessionCombo = nullptr;
-    DropDown* aiChatModelCombo = nullptr;
-    DropDown* aiChatOptionCombo = nullptr; // effort / sandbox
-    Checkbox* aiChatCheckbox = nullptr;    // skip permissions / always approve / skip sandbox
-    VirtButton* aiChatStopBtn = nullptr;
-    Edit* aiChatInput = nullptr;
-    WebviewWnd* aiChatWebView = nullptr;
-    bool aiChatWebViewReady = false;
-    VirtSplitter* aiChatSplitter = nullptr;
-    // VBox(label, session combo, webview slot, input row, options row);
-    // owns those controls and lays them out in hwndAiChatBox
-    ILayout* aiChatLayout = nullptr;
-    // the webview is created lazily; this spacer reserves its area in the layout
-    Spacer* aiChatWebViewSlot = nullptr;
-    // provider (AIChatBackend value) the panel content is configured for; -1 = none
-    int aiChatProvider = -1;
-
-    // width of the AI chat sidebar
-    int aiChatDx = 0;
 
     // vertical splitter for resizing left side panel
     // the splitters are virtual controls living in the frame's own tree
     // (frameRoot), not child windows
     VirtSplitter* sidebarSplitter = nullptr;
-
-    // horizontal splitter for resizing favorites and bookmars parts
-    VirtSplitter* favSplitter = nullptr;
 
     TabsCtrl* tabsCtrl = nullptr;
     bool tabsVisible = false;
@@ -467,16 +424,10 @@ struct MainWindow { // NOLINT(clang-analyzer-optin.performance.Padding)
     // chrome VBox: caption / tabs / menu / toolbar + the content row. Owns
     // the slots; HwndSlot::SetBounds moves each HWND (batched via winPos)
     VBox* chromeLayout = nullptr;
-    // content row: sidebar | splitter | (canvas / full-window favorites) |
-    // splitter | AI chat
+    // content row: sidebar | splitter | canvas
     HBox* frameLayout = nullptr;
     HwndSlot* tocSlot = nullptr;
-    HwndSlot* favSlot = nullptr;
-    // same hwndFavBox as favSlot; shown instead of the canvas when the
-    // Favorites tab is selected
-    HwndSlot* fullFavSlot = nullptr;
     HwndSlot* canvasSlot = nullptr;
-    HwndSlot* aiChatSlot = nullptr;
     HwndSlot* tabsSlot = nullptr;
     HwndSlot* menuSlot = nullptr;
     HwndSlot* toolbarTopSlot = nullptr;
@@ -549,21 +500,14 @@ struct MainWindow { // NOLINT(clang-analyzer-optin.performance.Padding)
             bool isToolbarVisible = false;
             bool isToolbarOverlay = false;
             bool tocVisible = false;
-            bool showFavorites = false;
-            // full-window Favorites tab vs. sidebar panel: different geometry
-            bool favoritesAsTab = false;
             bool showMenuBarRebar = false;
-            bool aiChatVisible = false;
-            int aiChatDx = 0;
             bool sidebarOnRight = false;
         };
         Layout layout;    // last applied layout state
         Rect lastFrameRc; // previous frame client size; a change skips WM_SETREDRAW
-        // desired visibility of the sidebar / AI chat panels; applied
-        // (HwndSetVisible) by RelayoutFrame
+        // desired visibility of the sidebar panel; applied (HwndSetVisible)
+        // by RelayoutFrame
         bool tocVisible = false;
-        bool favVisible = false;
-        bool aiChatVisible = false;
         bool updatePending = false; // a FrameUpdateUi uitask is queued
         bool toolbarDirty = false;  // repaint the toolbar on the next update
         bool tabsDirty = false;     // repaint the tab bar on the next update

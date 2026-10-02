@@ -39,7 +39,8 @@ enum class Arg {
     UpgradeFrom = 80, ForTesting = 81, QuickLook = 82, QuickLookAgent = 83,
     WindowPos = 84, DumpExif = 85, DumpChm = 86, Control = 87,
     UnitTests = 88, ForAi = 89, NewWindowTabs = 90, HtmlBackend = 91,
-    StartPerfLog = 92, LogPerfFile = 93, NoDesktopShortcut = 94,
+    StartPerfLog = 92, LogPerfFile = 93, NoDesktopShortcut = 94, NoResetSettings = 95,
+    WithResetSettings = 96,
 };
 
 static SeqStrings gArgNames =
@@ -66,7 +67,8 @@ static SeqStrings gArgNames =
     "upgrade-from\0" "for-testing\0" "quicklook\0" "quicklook-agent\0"
     "window-pos\0" "dump-exif\0" "dump-chm\0" "dbg-control\0"
     "unit-tests\0" "for-ai\0" "new-window-tabs\0" "html-backend\0"
-    "start-perf-log\0" "log-perf-file\0" "no-desktop-shortcut\0";
+    "start-perf-log\0" "log-perf-file\0" "no-desktop-shortcut\0" "no-reset-settings\0"
+    "with-reset-settings\0";
 // clang-format on
 // @gen-end flags
 
@@ -91,7 +93,7 @@ void ShowPrintersDialog(bool consoleOnly) {
         }
     }
     if (!consoleOnly) {
-        ShowTextInWindowDialog(Tr("SumatraPDF - Show Printers"), ToStr(out));
+        ShowTextInWindowDialog(Tr("MithenPDF - Show Printers"), ToStr(out));
     }
 }
 
@@ -499,6 +501,14 @@ void ParseFlags(Arena* a, WStr cmdLine, Flags& i, Str toolNames) {
         }
         if (arg == Arg::NoDesktopShortcut) {
             i.installer.noDesktopShortcut = true;
+            continue;
+        }
+        if (arg == Arg::NoResetSettings) {
+            i.installer.noResetSettings = true;
+            continue;
+        }
+        if (arg == Arg::WithResetSettings) {
+            i.installer.withResetSettings = true;
             continue;
         }
         if (arg == Arg::Rand) {

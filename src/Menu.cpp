@@ -22,7 +22,6 @@
 #include "base/GuessFileType.h"
 #include "EngineAll.h"
 #include "DisplayModel.h"
-#include "FileHistory.h"
 #include "Theme.h"
 #include "Annotation.h"
 #include "AnnotTextPopup.h"
@@ -33,8 +32,6 @@
 #include "WindowTab.h"
 #include "Commands.h"
 #include "ExternalViewers.h"
-#include "Favorites.h"
-#include "FileThumbnails.h"
 #include "HomePage.h"
 #include "Translations.h"
 #include "Toolbar.h"
@@ -65,9 +62,6 @@ struct MenuOwnerDrawInfo {
 constexpr UINT kMenuSeparatorID = (UINT)-13;
 
 static bool gAddCrashMeMenu = false;
-static bool ShowDebugMenu() {
-    return gIsDebugBuild || gIsPreReleaseBuild;
-}
 
 // note: IDM_VIEW_SINGLE_PAGE - IDM_VIEW_CONTINUOUS and also
 //       CmdZoomFIT_PAGE - CmdZoomCUSTOM must be in a continuous range!
@@ -75,6 +69,23 @@ static_assert(CmdViewLayoutLast - CmdViewLayoutFirst == 4, "view layout ids are 
 static_assert(CmdZoomLast - CmdZoomFirst == 19, "zoom ids are not in a continuous range");
 
 // clang-format off
+//[ ACCESSKEY_GROUP Tab Groups Menu
+// defined before menuDefFile, which has a "Tab Groups" submenu entry
+static MenuDef menuDefTabGroups[] = {
+    {
+        TrN("Save Tab Group"),
+        CmdTabGroupSave,
+    },
+    {
+        TrN("Restore Tab Group"),
+        CmdTabGroupRestore,
+    },
+    {
+        {},
+        0,
+    },
+};
+
 //[ ACCESSKEY_GROUP File Open Menu
 static MenuDef menuDefFileOpen[] = {
     {
@@ -86,11 +97,11 @@ static MenuDef menuDefFileOpen[] = {
         CmdOpenFileWithOSFilePicker,
     },
     {
-        TrN("Open using &SumatraPDF File Picker..."),
+        TrN("Open using &MithenPDF File Picker..."),
         CmdOpenFileWithSumatraFilePicker,
     },
     {
-        TrN("Use SumatraPDF File Picker"),
+        TrN("Use MithenPDF File Picker"),
         CmdToggleFilePicker,
     },
     {
@@ -218,6 +229,14 @@ static MenuDef menuDefFile[] = {
         0,
     },
     {
+        TrN("Tab &Groups"),
+        (UINT_PTR)menuDefTabGroups,
+    },
+    {
+        StrL(kMenuSeparator),
+        0,
+    },
+    {
         TrN("P&roperties"),
         CmdProperties,
     },
@@ -226,7 +245,7 @@ static MenuDef menuDefFile[] = {
         0,
     },
     {
-        TrN("E&xit"),
+        TrN("&Exit"),
         CmdExit,
     },
     {
@@ -342,22 +361,6 @@ static MenuDef menuDefView[] = {
     {
         StrL(kMenuSeparator),
         0,
-    },
-    {
-        TrN("Claude chat"),
-        CmdAIChatWithClaudeCode,
-    },
-    {
-        TrN("Grok chat"),
-        CmdAIChatWithGrokBuild,
-    },
-    {
-        TrN("Codex chat"),
-        CmdAIChatWithOpenAICodex,
-    },
-    {
-        TrN("Antigravity chat"),
-        CmdAIChatWithAntiGravity,
     },
     {
         {},
@@ -598,10 +601,6 @@ static MenuDef menuDefSettings[] = {
         CmdOpenSettingsFile,
     },
     {
-        TrN("Change Language"),
-        CmdChangeLanguage,
-    },
-    {
         TrN("&Theme"),
         (UINT_PTR)menuDefThemes,
     },
@@ -612,84 +611,11 @@ static MenuDef menuDefSettings[] = {
 };
 //] ACCESSKEY_GROUP Settings Menu
 
-//[ ACCESSKEY_GROUP Favorites Menu
-static MenuDef menuDefTabGroups[] = {
-    {
-        TrN("Save Tab Group"),
-        CmdTabGroupSave,
-    },
-    {
-        TrN("Restore Tab Group"),
-        CmdTabGroupRestore,
-    },
-    {
-        {},
-        0,
-    },
-};
-
-static MenuDef menuDefFavorites[] = {
-    {
-        TrN("Add to favorites"),
-        CmdFavoriteAdd,
-    },
-    {
-        TrN("Remove from favorites"),
-        CmdFavoriteDel,
-    },
-    {
-        TrN("Show Favorites"),
-        CmdFavoriteToggle,
-    },
-    {
-        TrN("Show Favorites in Tab"),
-        CmdFavoriteShowInTab,
-    },
-    {
-        StrL(kMenuSeparator),
-        0,
-    },
-    {
-        TrN("Tab Groups"),
-        (UINT_PTR)menuDefTabGroups,
-    },
-    {
-        {},
-        0,
-    },
-};
-//] ACCESSKEY_GROUP Favorites Menu
-
-
 //[ ACCESSKEY_GROUP Help Menu
 static MenuDef menuDefHelp[] = {
     {
-        TrN("&Manual"),
-        CmdHelpOpenManual,
-    },
-    {
-        TrN("&Keyboard Shortcuts"),
-        CmdHelpOpenKeyboardShortcuts
-    },
-    {
-        TrN("Manual On Website"),
-        CmdHelpOpenManualOnWebsite,
-    },
-    {
-        TrN("Visit &Website"),
+        TrN("&GitHub"),
         CmdHelpVisitWebsite,
-    },
-    {
-        TrN("Check for &Updates"),
-        CmdCheckUpdate,
-    },
-    {
-        TrN("Toggle Render Queue Info"),
-        CmdDebugToggleRenderInfo,
-    },
-    {
-        TrN("Toggle Cache Info"),
-        CmdDebugToggleCacheInfo,
     },
     {
         StrL(kMenuSeparator),
@@ -705,35 +631,6 @@ static MenuDef menuDefHelp[] = {
     },
 };
 //] ACCESSKEY_GROUP Help Menu
-
-//[ ACCESSKEY_GROUP Debug Menu
-static MenuDef menuDefDebug[] = {
-    {
-        StrL("Show links"),
-        CmdToggleLinks,
-    },
-    {
-        StrL("Show page boxes"),
-        CmdTogglePageBoxes,
-    },
-    {
-        StrL("Show images"),
-        CmdToggleImages,
-    },
-    {
-        StrL("Show fit content area"),
-        CmdDebugShowFitContentArea,
-    },
-    {
-        StrL("Show notification"),
-        CmdDebugShowNotif,
-    },
-    {
-        {},
-        0,
-    },
-};
-//] ACCESSKEY_GROUP Debug Menu
 
 //[ ACCESSKEY_GROUP Context Menu (Google Lens)
 static MenuDef menuDefGoogleLens[] = {
@@ -766,22 +663,6 @@ static MenuDef menuDefTranslateWith[] = {
     {
         TrN("&DeepL"),
         CmdTranslateSelectionWithDeepL,
-    },
-    {
-        TrN("G&rok Build"),
-        CmdTranslateSelectionWithGrokBuild,
-    },
-    {
-        TrN("Claude C&ode"),
-        CmdTranslateSelectionWithClaudeCode,
-    },
-    {
-        TrN("OpenAI Code&x"),
-        CmdTranslateSelectionWithOpenAICodex,
-    },
-    {
-        TrN("A&ntigravity"),
-        CmdTranslateSelectionWithAntiGravity,
     },
     {
         {},
@@ -961,20 +842,12 @@ static MenuDef menuDefMenubar[] = {
         (UINT_PTR)menuDefReadAloud,
     },
     {
-        TrN("F&avorites"),
-        (UINT_PTR)menuDefFavorites,
-    },
-    {
         TrN("&Settings"),
         (UINT_PTR)menuDefSettings,
     },
     {
         TrN("&Help"),
         (UINT_PTR)menuDefHelp,
-    },
-    {
-        StrL("Debug"),
-        (UINT_PTR)menuDefDebug,
     },
     {
         {},
@@ -1175,31 +1048,6 @@ static MenuDef menuDefContextImage[] = {
 };
 //] ACCESSKEY_GROUP Context Menu (Image)
 
-//[ ACCESSKEY_GROUP Context Menu (Document AI chat)
-static MenuDef menuDefDocumentAIChat[] = {
-    {
-        TrN("Grok Build"),
-        CmdAIChatWithGrokBuild,
-    },
-    {
-        TrN("OpenAI Codex"),
-        CmdAIChatWithOpenAICodex,
-    },
-    {
-        TrN("Claude Code"),
-        CmdAIChatWithClaudeCode,
-    },
-    {
-        TrN("Antigravity"),
-        CmdAIChatWithAntiGravity,
-    },
-    {
-        {},
-        0,
-    },
-};
-//] ACCESSKEY_GROUP Context Menu (Document AI chat)
-
 //[ ACCESSKEY_GROUP Context Menu (Document)
 static MenuDef menuDefDocumentOperations[] = {
     {
@@ -1307,19 +1155,6 @@ static MenuDef menuDefContext[] = {
         TrN("Selected &Image"),
         (UINT_PTR)menuDefContextImage,
     },
-    // note: strings cannot be "" or else items are not there
-    {
-        StrL("Add to favorites"),
-        CmdFavoriteAdd,
-    },
-    {
-        StrL("Remove from favorites"),
-        CmdFavoriteDel,
-    },
-    {
-        TrN("Show &Favorites"),
-        CmdFavoriteToggle,
-    },
     {
         TrN("Show &Bookmarks"),
         CmdToggleBookmarks,
@@ -1331,10 +1166,6 @@ static MenuDef menuDefContext[] = {
     {
         StrL(kMenuSeparator),
         kMenuSeparatorID,
-    },
-    {
-        TrN("AI chat with document using"),
-        (UINT_PTR)menuDefDocumentAIChat,
     },
     {
         TrN("Document"),
@@ -1362,40 +1193,6 @@ static MenuDef menuDefContext[] = {
     },
 };
 //] ACCESSKEY_GROUP Context Menu (Main)
-
-//[ ACCESSKEY_GROUP Context Menu (Start)
-static MenuDef menuDefContextStart[] = {
-    {
-        TrN("&Open Document"),
-        CmdOpenSelectedDocument,
-    },
-    {
-        TrN("Show in folder"),
-        CmdShowInFolder,
-    },
-    {
-        TrN("&Pin Document"),
-        CmdPinSelectedDocument,
-    },
-    {
-        StrL(kMenuSeparator),
-        0,
-    },
-    {
-        TrN("&Remove From History"),
-        CmdForgetSelectedDocument,
-    },
-    {
-        TrN("Delete File"),
-        CmdDeleteFile,
-    },
-    {
-        {},
-        0,
-    },
-};
-
-//] ACCESSKEY_GROUP Context Menu (Start)
 // clang-format on
 
 // clang-format off
@@ -1438,85 +1235,6 @@ static bool CmdIdInList(UINT_PTR cmdId, UINT_PTR* idsList, int n) {
 }
 
 #define cmdIdInList(name) CmdIdInList(cmdId, name, dimof(name))
-
-struct FileHistoryEntry {
-    Str path;
-    int cmdId;
-};
-
-// A recent file is a CmdFileHistory command carrying the path as an argument.
-// Custom commands live until the settings are re-read, so reuse the one already
-// made for a path instead of making one per menu rebuild. One pass over the
-// commands serves all the entries.
-static void SetFileHistoryCmdIds(Vec<FileHistoryEntry>& files) {
-    Vec<CustomCommand*> cmds;
-    GetCommandsWithOrigId(cmds, CmdFileHistory);
-    for (CustomCommand* cmd : cmds) {
-        Str path = GetCommandStringArg(cmd, kCmdArgFilePath, {});
-        for (FileHistoryEntry& fe : files) {
-            if (fe.cmdId == 0 && str::EqI(path, fe.path)) {
-                fe.cmdId = cmd->id;
-                break;
-            }
-        }
-    }
-
-    for (FileHistoryEntry& fe : files) {
-        if (fe.cmdId != 0) {
-            continue;
-        }
-        CommandArg* arg = NewStringArg(kCmdArgFilePath, fe.path);
-        fe.cmdId = CreateCustomCommand(StrL("CmdFileHistory"), CmdFileHistory, arg)->id;
-    }
-}
-
-static void AddFileMenuItem(HMENU menuFile, const FileHistoryEntry& fe, int index) {
-    ReportIf(!menuFile);
-    if (!menuFile) {
-        return;
-    }
-
-    TempStr menuString = path::GetBaseNameTemp(fe.path);
-    // shorten very long file names so that menu isn't too wide
-    const int kMaxRunes = 70;
-    menuString = ShortenStringUtf8InTheMiddleTemp(menuString, kMaxRunes);
-
-    TempStr fileName = MenuToSafeStringTemp(menuString);
-    int menuIdx = (index + 1) % 10;
-    menuString = fmt("&%d) %s", menuIdx, fileName);
-    uint flags = MF_BYCOMMAND | MF_ENABLED | MF_STRING;
-    InsertMenuW(menuFile, CmdExit, flags, (uint)fe.cmdId, CWStrTemp(menuString));
-}
-
-static void AppendRecentFilesToMenu(HMENU m) {
-    if (!CanAccessDisk()) {
-        return;
-    }
-
-    Vec<FileHistoryEntry> files;
-    for (int i = 0; i < kFileHistoryMaxRecent; i++) {
-        FileState* fs = FileHistoryGet(i);
-        if (!fs || fs->isMissing) {
-            break;
-        }
-        Str fp = fs->filePath;
-        if (len(fp) == 0) {
-            // comes from settings file so can be missing due to user modifications
-            continue;
-        }
-        VecAppend(files, FileHistoryEntry{fp, 0});
-    }
-    if (len(files) == 0) {
-        return;
-    }
-
-    SetFileHistoryCmdIds(files);
-    for (int i = 0; i < len(files); i++) {
-        AddFileMenuItem(m, files[i], i);
-    }
-
-    InsertMenuW(m, CmdExit, MF_BYCOMMAND | MF_SEPARATOR, 0, nullptr);
-}
 
 static void AppendCommandsToMenu(HMENU m, const Vec<CustomCommand*>& cmds, bool isEnabled) {
     for (CustomCommand* cmd : cmds) {
@@ -1612,8 +1330,6 @@ static void AppendExternalViewersToMenu(HMENU menuFile, Str filePath) {
 
 // shows duplicate separator if no external viewers
 static void DynamicPartOfFileMenu(HMENU menu, BuildMenuCtx* ctx) {
-    AppendRecentFilesToMenu(menu);
-
     // Suppress menu items that depend on specific software being installed:
     // e-mail client, Adobe Reader, Foxit, PDF-XChange
     // Don't hide items here that won't always be hidden
@@ -1676,7 +1392,6 @@ static void MenuSetEnabledForDocumentCommands(HMENU menu, bool hasDocument) {
 HMENU BuildMenuFromDef(MenuDef* menuDef, HMENU menu, BuildMenuCtx* ctx) {
     ReportIf(!menu);
 
-    bool isDebugMenu = menuDef == menuDefDebug;
     int i = 0;
 
     if (menuDef == menuDefThemes) {
@@ -1741,9 +1456,9 @@ HMENU BuildMenuFromDef(MenuDef* menuDef, HMENU menu, BuildMenuCtx* ctx) {
         bool removeMenu = false;
         bool disableMenu = false;
         // a null ctx means "don't auto-gate commands" -- the caller (e.g. the
-        // ToC / Favorites context menus) does its own per-item filtering and
-        // wants all items present. With an empty ctx, GetCommandIdState's
-        // no-document gate would wrongly strip document-dependent commands.
+        // ToC context menu) does its own per-item filtering and wants all items
+        // present. With an empty ctx, GetCommandIdState's no-document gate
+        // would wrongly strip document-dependent commands.
         if (!isSubMenu && ctx) {
             GetCommandIdState(ctx, cmdId, &removeMenu, &disableMenu);
         }
@@ -1774,15 +1489,13 @@ HMENU BuildMenuFromDef(MenuDef* menuDef, HMENU menu, BuildMenuCtx* ctx) {
                 removeMenu |= cmdId == CmdSearchGoogleLensImage && !onImage;
             }
         }
-        removeMenu |= ((subMenuDef == menuDefDebug) && !ShowDebugMenu());
         // without Annotations.SignatureImage it would just be Insert Image
         removeMenu |= !isSubMenu && cmdId == CmdSignWithImage && len(gSettings->annotations.signatureImage) == 0;
         if (removeMenu) {
             continue;
         }
 
-        bool noTranslate = isDebugMenu || cmdIdInList(menusNoTranslate);
-        noTranslate |= (subMenuDef == menuDefDebug);
+        bool noTranslate = cmdIdInList(menusNoTranslate);
         Str title = md.title;
         if (!noTranslate) {
             title = Str(trans::GetTranslation(md.title));
@@ -2104,8 +1817,6 @@ static void MenuUpdateStateForWindow(MainWindow* win) {
     bool checked = documentSpecific ? win->uiState.tocVisible : gSettings->showToc;
     MenuSetChecked(win->menu, CmdToggleBookmarks, checked);
 
-    MenuSetChecked(win->menu, CmdFavoriteToggle, gSettings->showFavorites);
-    MenuSetChecked(win->menu, CmdFavoriteShowInTab, FindFavoritesTab(win) != nullptr);
     {
         // checked when mode is not "hide" (show or overlay)
         bool toolbarOn = win->isFullScreen ? FullscreenToolbarModeFromPrefs() != kToolbarHide : !ToolbarModeIsHidden();
@@ -2157,132 +1868,6 @@ static void MenuUpdateStateForWindow(MainWindow* win) {
     MenuSetChecked(win->menu, CmdDebugShowFitContentArea, ShowFitContentArea());
     MenuSetEnabled(win->menu, CmdTabGroupSave, HasOpenedDocuments(win));
     MenuSetChecked(win->menu, CmdToggleFilePicker, gSettings && str::EqI(gSettings->filePicker, StrL("sumatrapdf")));
-}
-
-void OnAboutContextMenu(MainWindow* win, int x, int y) {
-    if (!HasPermission(Perm::SavePreferences | Perm::DiskAccess) || !SettingsRememberOpenedFiles() ||
-        !gSettings->showStartPage) {
-        return;
-    }
-
-    // Prefer the file under the click; keyboard/context-menu key falls back to
-    // the keyboard-selected home entry.
-    TempStr path = HomePageFilePathAtTemp(win, x, y);
-    bool fromClick = path && path::IsAbsolute(path);
-    if (!fromClick) {
-        path = str::DupTemp(HomePageSelectedFilePathTemp(win));
-    }
-    if (len(path) == 0 || !path::IsAbsolute(path)) {
-        return;
-    }
-
-    // Keep keyboard selection in sync with the right-clicked thumbnail
-    if (fromClick) {
-        HomePageOnHover(win, x, y);
-    }
-
-    FileState* fs = FileHistoryFindByPath(path);
-    if (!fs) {
-        return;
-    }
-
-    BuildMenuCtx ctx;
-    ctx.isDocLoaded = true;
-    ctx.filePath = path;
-    HMENU popup = BuildMenuFromDef(menuDefContextStart, CreatePopupMenu(), &ctx);
-    MenuSetChecked(popup, CmdPinSelectedDocument, fs->isPinned);
-    // Del is home-page-only (not a global accelerator), so AppendAccelKey won't
-    // pick it up — show it next to Remove From History explicitly
-    MenuSetText(popup, CmdForgetSelectedDocument, str::JoinTemp(Tr("&Remove From History"), StrL("\tDel")));
-    Point pt = HwndMapWindowPoint(win->hwndCanvas, HWND_DESKTOP, {x, y});
-    // keyboard menu (no hit under the cursor): place at cursor or near the frame
-    if (!fromClick) {
-        Point cursor = GetCursorPosition();
-        if (!cursor.IsEmpty()) {
-            pt = cursor;
-        } else {
-            Rect rc = HwndWindowRect(win->hwndFrame);
-            pt = Point(rc.x + 40, rc.y + 80);
-        }
-    }
-    MarkMenuOwnerDraw(popup);
-    INT cmd = TrackPopupMenu(popup, TPM_RETURNCMD | TPM_RIGHTBUTTON, pt.x, pt.y, 0, win->hwndFrame, nullptr);
-    FreeMenuOwnerDrawInfoData(popup);
-    DestroyMenu(popup);
-
-    if (CmdOpenSelectedDocument == cmd) {
-        LoadArgs args(path, win);
-        args.activateExisting = !IsCtrlPressed();
-        args.activateExistingInWindow = true;
-        LoadDocument(&args);
-        return;
-    }
-
-    if (CmdShowInFolder == cmd) {
-        ShowFileInFolder(win, path);
-        return;
-    }
-
-    if (CmdDeleteFile == cmd) {
-        if (!CanAccessDisk() || gPluginMode) {
-            return;
-        }
-        // own the path: delete closes tabs and rewrites history
-        TempStr pathOwned = str::DupTemp(path);
-        if (file::Exists(pathOwned)) {
-            WindowTab* tab = FindTabByFilePath(pathOwned);
-            if (tab) {
-                if (!MaybeSaveAnnotations(tab)) {
-                    return;
-                }
-                CloseTab(tab, false);
-            }
-            DeleteFileFromDiskAndHistory(pathOwned);
-        } else {
-            // missing file: still drop it from history
-            ForgetFileFromFrequentlyRead(win, pathOwned);
-            return;
-        }
-        if (IsMainWindowValidAndNotClosing(win)) {
-            win->DeleteToolTip();
-            win->RedrawAll(true);
-        }
-        return;
-    }
-
-    if (CmdPinSelectedDocument == cmd) {
-        fs->isPinned = !fs->isPinned;
-        win->DeleteToolTip();
-        win->RedrawAll(true);
-        return;
-    }
-
-    if (CmdForgetSelectedDocument == cmd) {
-        ForgetFileFromFrequentlyRead(win, path);
-        return;
-    }
-}
-
-// removes a file from the Frequently Read list on the home page. Files with
-// favorites are only hidden (so the favorites aren't lost). Used by both the
-// context menu and the per-thumbnail ✕ button (issue #283).
-void ForgetFileFromFrequentlyRead(MainWindow* win, Str filePath) {
-    FileState* fs = FileHistoryFindByPath(filePath);
-    if (!fs) {
-        return;
-    }
-    TempStr path = str::DupTemp(fs->filePath);
-    if (len(*fs->favorites) > 0) {
-        // only hide documents with favorites
-        FileHistoryMarkFileInexistent(fs->filePath, true);
-    } else {
-        FileHistoryRemove(fs);
-        DeleteFileState(fs);
-    }
-    DeleteThumbnailForFile(path);
-    ScheduleSaveSettings();
-    win->DeleteToolTip();
-    win->RedrawAll(true);
 }
 
 // s could be in format "file://path.pdf#page=1" or "mailto:foo@bar.com"
@@ -2418,42 +2003,7 @@ void OnWindowContextMenu(MainWindow* win, int x, int y) {
     MenuSetEnabled(popup, CmdToggleBookmarks, win->ctrl->HasToc());
     MenuSetChecked(popup, CmdToggleBookmarks, win->uiState.tocVisible);
 
-    MenuSetEnabled(popup, CmdFavoriteToggle, HasFavorites());
-    MenuSetChecked(popup, CmdFavoriteToggle, gSettings->showFavorites);
-    MenuSetEnabled(popup, CmdFavoriteShowInTab, HasFavorites() && SettingsUseTabs());
-    MenuSetChecked(popup, CmdFavoriteShowInTab, FindFavoritesTab(win) != nullptr);
-
     Str filePath = win->ctrl->GetFilePath();
-    bool favsSupported = HasPermission(Perm::SavePreferences) && CanAccessDisk();
-    if (favsSupported) {
-        if (pageNoUnderCursor > 0) {
-            bool isBookmarked = IsPageInFavorites(filePath, pageNoUnderCursor, win->ctrl);
-
-            TempStr addText;
-            TempStr delText;
-            if (ShowChapterUi(win->ctrl)) {
-                Location loc = win->ctrl->LocationFromPageNo(pageNoUnderCursor);
-                addText = fmt(Tr("Add chapter %d page %d to favorites").s, loc.chapter, loc.page);
-                delText = fmt(Tr("Remove chapter %d page %d from favorites").s, loc.chapter, loc.page);
-            } else {
-                TempStr pageLabel = win->ctrl->GetPageLabeTemp(pageNoUnderCursor);
-                addText = fmt(Tr("Add page %s to favorites").s, pageLabel);
-                delText = fmt(Tr("Remove page %s from favorites").s, pageLabel);
-            }
-
-            if (isBookmarked) {
-                MenuRemove(popup, CmdFavoriteAdd);
-                MenuSetText(popup, CmdFavoriteDel, delText);
-            } else {
-                MenuRemove(popup, CmdFavoriteDel);
-                TempStr s = AppendAccelKeyToMenuStringTemp(addText, CmdFavoriteAdd);
-                MenuSetText(popup, CmdFavoriteAdd, s);
-            }
-        } else {
-            MenuRemove(popup, CmdFavoriteAdd);
-            MenuRemove(popup, CmdFavoriteDel);
-        }
-    }
 
     // if toolbar is not shown, add option to show it
     if (gSettings->showToolbar) {
@@ -2621,16 +2171,6 @@ void OnWindowContextMenu(MainWindow* win, int x, int y) {
                     FreePixmap(px);
                 }
             }
-            return;
-        }
-        case CmdFavoriteAdd: {
-            if (pageNoUnderCursor > 0) {
-                AddFavoriteForPage(win, pageNoUnderCursor);
-            }
-            return;
-        }
-        case CmdFavoriteDel: {
-            DelFavorite(filePath, pageNoUnderCursor, win->ctrl);
             return;
         }
     }
@@ -3046,16 +2586,6 @@ void UpdateAppMenu(MainWindow* win, HMENU m) {
     UINT_PTR id = (UINT_PTR)GetMenuItemID(m, 0);
     if (id == menuDefFile[0].idOrSubmenu) {
         RebuildFileMenu(win->CurrentTab(), m);
-    } else if (id == menuDefFavorites[0].idOrSubmenu) {
-        MenuEmpty(m);
-        // build with a real ctx (not nullptr): command-visibility now hides
-        // document-dependent commands when no document is loaded, and a null ctx
-        // looks like "no document" -- which dropped CmdFavoriteAdd/CmdFavoriteDel
-        // from the rebuilt menu, so RebuildFavMenu's MenuSetText then failed
-        auto* ctx = NewBuildMenuCtx(win->CurrentTab(), Point{0, 0});
-        AutoDelete delCtx(ctx);
-        BuildMenuFromDef(menuDefFavorites, m, ctx);
-        RebuildFavMenu(win, m);
     } else if (id == menuDefZoom[0].idOrSubmenu) {
         BuildMenuZoom(m);
     } else if (m && m == win->menuReadAloud) {

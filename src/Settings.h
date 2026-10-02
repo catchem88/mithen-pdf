@@ -205,23 +205,6 @@ struct TabGroup {
     Vec<TabFile*>* tabFiles;
 };
 
-// pages of this document bookmarked in the Favorites menu
-struct Favorite {
-    // name of this favorite as shown in the menu
-    Str name;
-    // number of the bookmarked page, or `bm:<bookmark>` for documents with
-    // chapters (see PagePosition.cpp)
-    Str pageNo;
-    // label for this page (only present if logical and physical page
-    // numbers are not the same)
-    Str pageLabel;
-    // position on the page when the favorite was added (document units; -1
-    // if not stored)
-    PointF scrollPos;
-    // session-only favorite; omitted when serializing array elements
-    bool isTemporary;
-};
-
 // reflowable (ebook) settings for just this document. The block is
 // absent until you add it; a field left empty or 0 uses the global
 // EBookUI value. The global section's WindowBgCol and
@@ -256,8 +239,6 @@ struct FileEBookUI {
 // history of opened files, most recently used first. A closed file
 // stays here until it drops off the list or the history is cleared
 struct FileState {
-    // pages of this document bookmarked in the Favorites menu
-    Vec<Favorite*>* favorites;
     // reflowable (ebook) settings for just this document. The block is
     // absent until you add it; a field left empty or 0 uses the global
     // EBookUI value. The global section's WindowBgCol and
@@ -469,70 +450,6 @@ struct ImageUI {
     // occupies the whole two-page row instead of pairing with the next
     // page (issues #1324, #872)
     bool landscapeAsSpread;
-};
-
-// settings for the Claude Code chat sidebar
-struct ClaudeCode {
-    // Claude model alias for --model (e.g. sonnet, opus, haiku); uses opus
-    // if not in the model list
-    Str model;
-    // extra Claude model aliases for the dropdown, comma-separated;
-    // documented Claude Code aliases are always included
-    Str models;
-    // Claude effort level: 0=Low, 1=Medium, 2=High, 3=Max
-    int effort;
-    // if true, pass --dangerously-skip-permissions to Claude Code
-    bool skipPermissions;
-    // background color of the Claude Code chat panel
-    ParsedColor bgColor;
-};
-
-// settings for the Grok Build chat sidebar
-struct GrokBuild {
-    // Grok model ID for --model (e.g. grok-4.5)
-    Str model;
-    // extra Grok model IDs for the dropdown, comma-separated; used in
-    // addition to models reported by Grok
-    Str models;
-    // Grok effort level: 0=Low, 1=Medium, 2=High, 3=XHigh, 4=Max
-    int effort;
-    // if true, pass --always-approve to Grok Build (auto-approve tool
-    // executions)
-    bool alwaysApprove;
-    // background color of the Grok Build chat panel
-    ParsedColor bgColor;
-};
-
-// settings for the OpenAI Codex chat sidebar
-struct CodexBuild {
-    // Codex model ID for -m (e.g. gpt-5.5, gpt-5.4, o3)
-    Str model;
-    // extra Codex model IDs for the dropdown, comma-separated; used in
-    // addition to models reported by Codex
-    Str models;
-    // Codex sandbox mode: 0=read-only, 1=workspace-write,
-    // 2=danger-full-access
-    int sandbox;
-    // if true, pass --dangerously-bypass-approvals-and-sandbox to Codex
-    bool skipSandbox;
-    // background color of the OpenAI Codex chat panel
-    ParsedColor bgColor;
-};
-
-// settings for the Antigravity chat sidebar
-struct AntiGravity {
-    // Antigravity model ID for --model (e.g. gemini-3.8-flash-medium)
-    Str model;
-    // extra Antigravity model IDs for the dropdown, comma-separated
-    Str models;
-    // Antigravity effort level: 0=Low, 1=Medium, 2=High, 3=Max
-    int effort;
-    // if true, pass --dangerously-skip-permissions to Antigravity CLI so
-    // it can read the current file etc. in headless print mode (agy cannot
-    // prompt for permissions with -p)
-    bool autoApprove;
-    // background color of the Antigravity chat panel
-    ParsedColor bgColor;
 };
 
 // customization options for the ebook UI (EPUB, MOBI, FB2, PDB and
@@ -934,8 +851,7 @@ struct Settings {
     // remembered source language for selection translation; empty means
     // Auto
     Str translateFromLang;
-    // remembered engine for Translate Selection: Google, DeepL, Grok
-    // Build, Claude Code, OpenAI Codex or Antigravity
+    // remembered engine for Translate Selection: Google or DeepL
     Str translateEngine;
     // ISO code of the current UI language
     Str uiLanguage;
@@ -965,14 +881,6 @@ struct Settings {
     Fullscreen fullscreen;
     // customization options for image files UI
     ImageUI imageUI;
-    // settings for the Claude Code chat sidebar
-    ClaudeCode claudeCode;
-    // settings for the Grok Build chat sidebar
-    GrokBuild grokBuild;
-    // settings for the OpenAI Codex chat sidebar
-    CodexBuild codexBuild;
-    // settings for the Antigravity chat sidebar
-    AntiGravity antiGravity;
     // customization options for the ebook UI (EPUB, MOBI, FB2, PDB and
     // plain text)
     EBookUI eBookUI;
@@ -1029,9 +937,6 @@ struct Settings {
     // percentage of the current zoom level. If 0 or negative, zooming
     // steps through ZoomLevels instead
     float zoomIncrement;
-    // width of the AI chat sidebar (0 = use default); shared by Claude
-    // Code, Grok Build, and OpenAI Codex (internal)
-    int aiChatSidebarDx;
     // actual resolution of the main screen in DPI, used to show documents
     // at their physical size; if 0 or negative, the resolution reported by
     // Windows is used
@@ -1045,8 +950,6 @@ struct Settings {
     DisplayMode defaultDisplayModeEnum;
     // value of DefaultZoom for internal usage
     float defaultZoomFloat;
-    // timestamp of the last update check
-    FILETIME timeOfLastUpdateCheck;
     // modification time of the preferences file when it was last read
     FILETIME lastPrefUpdate;
     // position of the document properties window
@@ -1068,7 +971,7 @@ struct Settings {
     // Options, so a double-click in the document can jump to the matching
     // line in a LaTeX editor
     bool enableTeXEnhancements;
-    // if true, Esc key closes SumatraPDF. In presentation or fullscreen
+    // if true, Esc key closes MithenPDF. In presentation or fullscreen
     // mode, Esc leaves that mode first
     bool escToExit;
     // if true, show the full path to the document in the title bar
@@ -1086,8 +989,8 @@ struct Settings {
     // changed (currently doesn't work for documents shown in the ebook UI)
     bool reloadModifiedDocuments;
     // if true, keep a history of opened documents and their display
-    // settings (FileStates); closing a document doesn't remove it from the
-    // history. Also required for saving SessionData
+    // settings (MithenPDF defaults to false: opening a file leaves no
+    // trace)
     bool rememberOpenedFiles;
     // if true, store display settings for each document separately (i.e.
     // everything after UseDefaultState in FileStates)
@@ -1122,12 +1025,6 @@ struct Settings {
     // if true, the find UI is a floating, movable window with a results
     // list instead of the compact toolbar overlay
     bool searchUIFloating;
-    // if true, show the Favorites sidebar
-    bool showFavorites;
-    // if true, favorites within each file are sorted alphabetically by
-    // name (or page label); if false (the default), they are sorted by
-    // page number
-    bool sortFavoritesByName;
     // if true, show the table of contents (Bookmarks) sidebar when the
     // document has one
     bool showToc;
@@ -1256,8 +1153,6 @@ struct Settings {
     // customization options for HTML UI. If UseFixedPageUI is true, MuPDF
     // is used; otherwise WebView2 browser view is used when available
     HtmlUI htmlUI;
-    // if true, check once a day whether an update is available
-    bool checkForUpdates;
 };
 // for parsing themes
 struct Themes {
@@ -1513,77 +1408,6 @@ static const StructInfo gHtmlUIInfo = {
     gHtmlUIFields,
     "UseFixedPageUI",
     "if true, use MuPDF to render HTML; if false, use WebView2 browser view when available",
-    false};
-
-static const FieldInfo gClaudeCodeFields[] = {
-    {offsetof(ClaudeCode, model), SettingType::String, (intptr_t)"sonnet"},
-    {offsetof(ClaudeCode, models), SettingType::String, (intptr_t)""},
-    {offsetof(ClaudeCode, effort), SettingType::Int, 1},
-    {offsetof(ClaudeCode, skipPermissions), SettingType::Bool, false},
-    {offsetof(ClaudeCode, bgColor), SettingType::Color, (intptr_t)"#ffffff"},
-};
-static const StructInfo gClaudeCodeInfo = {
-    sizeof(ClaudeCode),
-    5,
-    gClaudeCodeFields,
-    "Model\0Models\0Effort\0SkipPermissions\0BgColor",
-    "Claude model alias for --model (e.g. sonnet, opus, haiku); uses opus if not in the model list\0extra Claude model "
-    "aliases for the dropdown, comma-separated; documented Claude Code aliases are always included\0Claude effort "
-    "level: 0=Low, 1=Medium, 2=High, 3=Max\0if true, pass --dangerously-skip-permissions to Claude Code\0background "
-    "color of the Claude Code chat panel",
-    false};
-
-static const FieldInfo gGrokBuildFields[] = {
-    {offsetof(GrokBuild, model), SettingType::String, (intptr_t)"grok-4.5"},
-    {offsetof(GrokBuild, models), SettingType::String, (intptr_t)""},
-    {offsetof(GrokBuild, effort), SettingType::Int, 1},
-    {offsetof(GrokBuild, alwaysApprove), SettingType::Bool, false},
-    {offsetof(GrokBuild, bgColor), SettingType::Color, (intptr_t)"#ffffff"},
-};
-static const StructInfo gGrokBuildInfo = {
-    sizeof(GrokBuild),
-    5,
-    gGrokBuildFields,
-    "Model\0Models\0Effort\0AlwaysApprove\0BgColor",
-    "Grok model ID for --model (e.g. grok-4.5)\0extra Grok model IDs for the dropdown, comma-separated; used in "
-    "addition to models reported by Grok\0Grok effort level: 0=Low, 1=Medium, 2=High, 3=XHigh, 4=Max\0if true, pass "
-    "--always-approve to Grok Build (auto-approve tool executions)\0background color of the Grok Build chat panel",
-    false};
-
-static const FieldInfo gCodexBuildFields[] = {
-    {offsetof(CodexBuild, model), SettingType::String, (intptr_t)"gpt-5.5"},
-    {offsetof(CodexBuild, models), SettingType::String, (intptr_t)""},
-    {offsetof(CodexBuild, sandbox), SettingType::Int, 1},
-    {offsetof(CodexBuild, skipSandbox), SettingType::Bool, false},
-    {offsetof(CodexBuild, bgColor), SettingType::Color, (intptr_t)"#ffffff"},
-};
-static const StructInfo gCodexBuildInfo = {
-    sizeof(CodexBuild),
-    5,
-    gCodexBuildFields,
-    "Model\0Models\0Sandbox\0SkipSandbox\0BgColor",
-    "Codex model ID for -m (e.g. gpt-5.5, gpt-5.4, o3)\0extra Codex model IDs for the dropdown, comma-separated; used "
-    "in addition to models reported by Codex\0Codex sandbox mode: 0=read-only, 1=workspace-write, "
-    "2=danger-full-access\0if true, pass --dangerously-bypass-approvals-and-sandbox to Codex\0background color of the "
-    "OpenAI Codex chat panel",
-    false};
-
-static const FieldInfo gAntiGravityFields[] = {
-    {offsetof(AntiGravity, model), SettingType::String, (intptr_t)"gemini-3.8-flash-medium"},
-    {offsetof(AntiGravity, models), SettingType::String, (intptr_t)""},
-    {offsetof(AntiGravity, effort), SettingType::Int, 1},
-    {offsetof(AntiGravity, autoApprove), SettingType::Bool, true},
-    {offsetof(AntiGravity, bgColor), SettingType::Color, (intptr_t)"#ffffff"},
-};
-static const StructInfo gAntiGravityInfo = {
-    sizeof(AntiGravity),
-    5,
-    gAntiGravityFields,
-    "Model\0Models\0Effort\0AutoApprove\0BgColor",
-    "Antigravity model ID for --model (e.g. gemini-3.8-flash-medium)\0extra Antigravity model IDs for the dropdown, "
-    "comma-separated\0Antigravity effort level: 0=Low, 1=Medium, 2=High, 3=Max\0if true, pass "
-    "--dangerously-skip-permissions to Antigravity CLI so it can read the current file etc. in headless print mode "
-    "(agy cannot prompt for permissions with -p)\0background color of the Antigravity chat panel",
     false};
 
 static const FieldInfo gAnnotationsFields[] = {
@@ -1902,36 +1726,6 @@ static const StructInfo gRect_2_Info = {
     "pixels\0width, in screen pixels\0height, in screen pixels",
     false};
 
-static const FieldInfo gPointFFields[] = {
-    {offsetof(PointF, x), SettingType::Float, (intptr_t)"-1"},
-    {offsetof(PointF, y), SettingType::Float, (intptr_t)"-1"},
-};
-static const StructInfo gPointFInfo = {sizeof(PointF),
-                                       2,
-                                       gPointFFields,
-                                       "X\0Y",
-                                       "horizontal position on the page, in document units; -1 if not stored\0vertical "
-                                       "position on the page, in document units; -1 if not stored",
-                                       false};
-
-static const FieldInfo gFavoriteFields[] = {
-    {offsetof(Favorite, name), SettingType::String, 0},
-    {offsetof(Favorite, pageNo), SettingType::String, (intptr_t)"1"},
-    {offsetof(Favorite, pageLabel), SettingType::String, 0},
-    {offsetof(Favorite, scrollPos), SettingType::Compact, (intptr_t)&gPointFInfo},
-    {offsetof(Favorite, isTemporary), SettingType::Bool, false, true},
-};
-static const StructInfo gFavoriteInfo = {
-    sizeof(Favorite),
-    5,
-    gFavoriteFields,
-    "Name\0PageNo\0PageLabel\0ScrollPos\0IsTemporary",
-    "name of this favorite as shown in the menu\0number of the bookmarked page, or `bm:<bookmark>` for documents with "
-    "chapters (see PagePosition.cpp)\0label for this page (only present if logical and physical page numbers are not "
-    "the same)\0position on the page when the favorite was added (document units; -1 if not stored)\0session-only "
-    "favorite; omitted when serializing array elements",
-    true};
-
 static const FieldInfo gFileEBookUIFields[] = {
     {offsetof(FileEBookUI, fontName), SettingType::String, (intptr_t)""},
     {offsetof(FileEBookUI, fontSize), SettingType::Float, (intptr_t)"0"},
@@ -1956,14 +1750,14 @@ static const StructInfo gFileEBookUIInfo = {
     "to this document; empty uses EBookUI.CustomCSS",
     false};
 
-static const FieldInfo gPointF_1_Fields[] = {
+static const FieldInfo gPointFFields[] = {
     {offsetof(PointF, x), SettingType::Float, (intptr_t)"0"},
     {offsetof(PointF, y), SettingType::Float, (intptr_t)"0"},
 };
-static const StructInfo gPointF_1_Info = {
+static const StructInfo gPointFInfo = {
     sizeof(PointF),
     2,
-    gPointF_1_Fields,
+    gPointFFields,
     "X\0Y",
     "horizontal scroll offset, in document units\0vertical scroll offset, in document units",
     false};
@@ -1984,7 +1778,6 @@ static const StructInfo gRect_3_Info = {
     false};
 
 static const FieldInfo gFileStateFields[] = {
-    {offsetof(FileState, favorites), SettingType::Array, (intptr_t)&gFavoriteInfo},
     {offsetof(FileState, eBookUI), SettingType::StructPtr, (intptr_t)&gFileEBookUIInfo},
     {offsetof(FileState, tocState), SettingType::IntArray, 0},
     {offsetof(FileState, filePath), SettingType::String, 0},
@@ -1999,7 +1792,7 @@ static const FieldInfo gFileStateFields[] = {
     {offsetof(FileState, rotation), SettingType::Int, 0},
     {offsetof(FileState, windowState), SettingType::Int, 0},
     {offsetof(FileState, sidebarDx), SettingType::Int, 0},
-    {offsetof(FileState, scrollPos), SettingType::Compact, (intptr_t)&gPointF_1_Info},
+    {offsetof(FileState, scrollPos), SettingType::Compact, (intptr_t)&gPointFInfo},
     {offsetof(FileState, windowPos), SettingType::Compact, (intptr_t)&gRect_3_Info},
     {offsetof(FileState, isPinned), SettingType::Bool, false},
     {offsetof(FileState, isMissing), SettingType::Bool, false},
@@ -2012,41 +1805,41 @@ static const FieldInfo gFileStateFields[] = {
 };
 static StructInfo gFileStateInfo = {
     sizeof(FileState),
-    25,
+    24,
     gFileStateFields,
-    "Favorites\0EBookUI\0TocState\0FilePath\0DecryptionKey\0DisplayMode\0Zoom\0BgCol\0TabCol\0OpenCount\0PageNo\0PageCo"
-    "unt\0Rotation\0WindowState\0SidebarDx\0ScrollPos\0WindowPos\0IsPinned\0IsMissing\0UseDefaultState\0ShowToc\0Displa"
-    "yR2L\0UniformPageWidth\0TrimEmptyMargins\0FreePan",
-    "pages of this document bookmarked in the Favorites menu\0reflowable (ebook) settings for just this document. The "
-    "block is absent until you add it; a field left empty or 0 uses the global EBookUI value. The global section's "
-    "WindowBgCol and DefaultDisplayMode are already per-document as BgCol and DisplayMode below\0data required to "
-    "determine which parts of the table of contents have been expanded\0path of the document\0data required to open a "
-    "password protected document without having to ask for the password again\0layout of pages. valid values: "
-    "automatic, single page, facing, book view, continuous, continuous facing, continuous book view\0zoom (in %) or "
-    "one of those values: fit page, fit width, fit height, fit content, fit visible\0if given, overrides the "
-    "background color for this document\0if given, overrides the tab color for this document\0number of times this "
-    "document has been opened recently\0number of the last read page, or `bm:<bookmark>` for documents with chapters "
-    "(folds in ReparseIdx; see PagePosition.cpp)\0number of pages in the document when it was last open; 0 if unknown. "
-    "Used to show reading progress on the home page\0how far pages have been rotated as a multiple of 90 "
-    "degrees\0state of the window. 1 is normal, 2 is maximized, 3 is fullscreen, 4 is minimized\0width of the "
-    "bookmarks / favorites sidebar in screen pixels, as last resized\0how far this document has been scrolled (in x "
-    "and y direction)\0default position (can be on any monitor)\0if true, the document is \"pinned\" to the Frequently "
-    "Read list, so that recently opened documents don't displace it\0if true, the file is considered missing and won't "
-    "be shown in any list\0if true, this document opens with the global defaults instead of the values below\0if true, "
-    "show the table of contents (Bookmarks) sidebar when the document has one\0if true, the document is displayed "
-    "right-to-left in facing and book view modes\0if true, percentage zoom scales every page to the width page 1 has "
-    "at that zoom level\0if true, empty margins around page content are trimmed from display\0if true, the view can be "
-    "panned past the page edges, so any part of a page can be brought to the center of the window",
+    "EBookUI\0TocState\0FilePath\0DecryptionKey\0DisplayMode\0Zoom\0BgCol\0TabCol\0OpenCount\0PageNo\0PageCount\0Rotati"
+    "on\0WindowState\0SidebarDx\0ScrollPos\0WindowPos\0IsPinned\0IsMissing\0UseDefaultState\0ShowToc\0DisplayR2L\0Unifo"
+    "rmPageWidth\0TrimEmptyMargins\0FreePan",
+    "reflowable (ebook) settings for just this document. The block is absent until you add it; a field left empty or 0 "
+    "uses the global EBookUI value. The global section's WindowBgCol and DefaultDisplayMode are already per-document "
+    "as BgCol and DisplayMode below\0data required to determine which parts of the table of contents have been "
+    "expanded\0path of the document\0data required to open a password protected document without having to ask for the "
+    "password again\0layout of pages. valid values: automatic, single page, facing, book view, continuous, continuous "
+    "facing, continuous book view\0zoom (in %) or one of those values: fit page, fit width, fit height, fit content, "
+    "fit visible\0if given, overrides the background color for this document\0if given, overrides the tab color for "
+    "this document\0number of times this document has been opened recently\0number of the last read page, or "
+    "`bm:<bookmark>` for documents with chapters (folds in ReparseIdx; see PagePosition.cpp)\0number of pages in the "
+    "document when it was last open; 0 if unknown. Used to show reading progress on the home page\0how far pages have "
+    "been rotated as a multiple of 90 degrees\0state of the window. 1 is normal, 2 is maximized, 3 is fullscreen, 4 is "
+    "minimized\0width of the bookmarks / favorites sidebar in screen pixels, as last resized\0how far this document "
+    "has been scrolled (in x and y direction)\0default position (can be on any monitor)\0if true, the document is "
+    "\"pinned\" to the Frequently Read list, so that recently opened documents don't displace it\0if true, the file is "
+    "considered missing and won't be shown in any list\0if true, this document opens with the global defaults instead "
+    "of the values below\0if true, show the table of contents (Bookmarks) sidebar when the document has one\0if true, "
+    "the document is displayed right-to-left in facing and book view modes\0if true, percentage zoom scales every page "
+    "to the width page 1 has at that zoom level\0if true, empty margins around page content are trimmed from "
+    "display\0if true, the view can be panned past the page edges, so any part of a page can be brought to the center "
+    "of the window",
     false};
 
-static const FieldInfo gPointF_2_Fields[] = {
+static const FieldInfo gPointF_1_Fields[] = {
     {offsetof(PointF, x), SettingType::Float, (intptr_t)"0"},
     {offsetof(PointF, y), SettingType::Float, (intptr_t)"0"},
 };
-static const StructInfo gPointF_2_Info = {
+static const StructInfo gPointF_1_Info = {
     sizeof(PointF),
     2,
-    gPointF_2_Fields,
+    gPointF_1_Fields,
     "X\0Y",
     "horizontal scroll offset, in document units\0vertical scroll offset, in document units",
     false};
@@ -2057,7 +1850,7 @@ static const FieldInfo gTabStateFields[] = {
     {offsetof(TabState, pageNo), SettingType::String, (intptr_t)"1"},
     {offsetof(TabState, zoom), SettingType::String, (intptr_t)"fit page"},
     {offsetof(TabState, rotation), SettingType::Int, 0},
-    {offsetof(TabState, scrollPos), SettingType::Compact, (intptr_t)&gPointF_2_Info},
+    {offsetof(TabState, scrollPos), SettingType::Compact, (intptr_t)&gPointF_1_Info},
     {offsetof(TabState, showToc), SettingType::Bool, true},
     {offsetof(TabState, tocState), SettingType::IntArray, 0},
 };
@@ -2106,17 +1899,6 @@ static const StructInfo gSessionDataInfo = {
     "any monitor)\0width of the favorites / bookmarks sidebar in screen pixels (0 if it wasn't shown)",
     false};
 
-static const FieldInfo gFILETIMEFields[] = {
-    {offsetof(FILETIME, dwHighDateTime), SettingType::Int, 0},
-    {offsetof(FILETIME, dwLowDateTime), SettingType::Int, 0},
-};
-static const StructInfo gFILETIMEInfo = {sizeof(FILETIME),
-                                         2,
-                                         gFILETIMEFields,
-                                         "DwHighDateTime\0DwLowDateTime",
-                                         "high 32 bits of the FILETIME\0low 32 bits of the FILETIME",
-                                         false};
-
 static const FieldInfo gPointFields[] = {
     {offsetof(Point, x), SettingType::Int, 0},
     {offsetof(Point, y), SettingType::Int, 0},
@@ -2133,19 +1915,19 @@ static const FieldInfo gSettingsFields[] = {
     {offsetof(Settings, disableJavaScript), SettingType::Bool, false},
     {offsetof(Settings, allowExternalImages), SettingType::Bool, false},
     {offsetof(Settings, enableTeXEnhancements), SettingType::Bool, false},
-    {offsetof(Settings, escToExit), SettingType::Bool, false},
+    {offsetof(Settings, escToExit), SettingType::Bool, true},
     {offsetof(Settings, fullPathInTitle), SettingType::Bool, false},
     {offsetof(Settings, inverseSearchCmdLine), SettingType::String, 0},
     {offsetof(Settings, lazyLoading), SettingType::Bool, false},
     {offsetof(Settings, mainWindowBackground), SettingType::Color, (intptr_t)"#80fff200"},
-    {offsetof(Settings, noHomeTab), SettingType::Bool, false},
+    {offsetof(Settings, noHomeTab), SettingType::Bool, true},
     {offsetof(Settings, homePageSortByFrequentlyRead), SettingType::Bool, false},
     {offsetof(Settings, homePageViewMode), SettingType::String, (intptr_t)"thumbnails"},
     {offsetof(Settings, filePicker), SettingType::String, (intptr_t)""},
     {offsetof(Settings, printerUI), SettingType::String, (intptr_t)""},
     {offsetof(Settings, reloadModifiedDocuments), SettingType::Bool, true},
-    {offsetof(Settings, rememberOpenedFiles), SettingType::Bool, true},
-    {offsetof(Settings, rememberStatePerDocument), SettingType::Bool, true},
+    {offsetof(Settings, rememberOpenedFiles), SettingType::Bool, false},
+    {offsetof(Settings, rememberStatePerDocument), SettingType::Bool, false},
     {offsetof(Settings, restoreSession), SettingType::Bool, true},
     {offsetof(Settings, reuseInstance), SettingType::Bool, true},
     {offsetof(Settings, showMenubar), SettingType::Bool, true},
@@ -2159,8 +1941,6 @@ static const FieldInfo gSettingsFields[] = {
     {offsetof(Settings, toolbar), SettingType::String, (intptr_t)"show"},
     {offsetof(Settings, toolbarPosition), SettingType::String, (intptr_t)"top"},
     {offsetof(Settings, searchUIFloating), SettingType::Bool, false},
-    {offsetof(Settings, showFavorites), SettingType::Bool, false},
-    {offsetof(Settings, sortFavoritesByName), SettingType::Bool, false},
     {offsetof(Settings, showToc), SettingType::Bool, true},
     {offsetof(Settings, alwaysShowSidebar), SettingType::Bool, false},
     {offsetof(Settings, sidebarOnRight), SettingType::Bool, false},
@@ -2179,7 +1959,7 @@ static const FieldInfo gSettingsFields[] = {
     {offsetof(Settings, showAnnotationAuthorInTooltip), SettingType::Bool, false},
     {offsetof(Settings, showTocPageNumbers), SettingType::Bool, true},
     {offsetof(Settings, autoGenerateTOC), SettingType::Bool, false},
-    {offsetof(Settings, showStartPage), SettingType::Bool, true},
+    {offsetof(Settings, showStartPage), SettingType::Bool, false},
     {offsetof(Settings, sidebarDx), SettingType::Int, 0, true},
     {offsetof(Settings, scrollbars), SettingType::String, (intptr_t)"windows"},
     {offsetof(Settings, scrollbarInSinglePage), SettingType::Bool, false},
@@ -2197,7 +1977,7 @@ static const FieldInfo gSettingsFields[] = {
     {offsetof(Settings, fastScrollOverScrollbar), SettingType::Bool, false},
     {offsetof(Settings, preventSleepInFullscreen), SettingType::Bool, true},
     {offsetof(Settings, tabWidth), SettingType::Int, 300},
-    {offsetof(Settings, theme), SettingType::String, (intptr_t)"Light"},
+    {offsetof(Settings, theme), SettingType::String, (intptr_t)"Charcoal"},
     {offsetof(Settings, helpTheme), SettingType::String, (intptr_t)"app"},
     {offsetof(Settings, lastLightTheme), SettingType::String, (intptr_t)"", true},
     {offsetof(Settings, lastDarkTheme), SettingType::String, (intptr_t)"", true},
@@ -2213,7 +1993,7 @@ static const FieldInfo gSettingsFields[] = {
     {offsetof(Settings, engineeringDrawingEnhance), SettingType::String, (intptr_t)"off"},
     {offsetof(Settings, disableAutoLinks), SettingType::Bool, false},
     {offsetof(Settings, useSysColors), SettingType::Bool, false},
-    {offsetof(Settings, useTabs), SettingType::Bool, true},
+    {offsetof(Settings, useTabs), SettingType::Bool, false},
     {offsetof(Settings, selectionToolbar), SettingType::Bool, true},
     {offsetof(Settings, selectionToolbarLayout), SettingType::String, (intptr_t)""},
     {offsetof(Settings, tabsMru), SettingType::Bool, false},
@@ -2234,16 +2014,6 @@ static const FieldInfo gSettingsFields[] = {
     {offsetof(Settings, markdownUI), SettingType::Struct, (intptr_t)&gMarkdownUIInfo},
     {(size_t)-1, SettingType::Comment, 0},
     {offsetof(Settings, htmlUI), SettingType::Struct, (intptr_t)&gHtmlUIInfo},
-    {(size_t)-1, SettingType::Comment, 0},
-    {offsetof(Settings, claudeCode), SettingType::Struct, (intptr_t)&gClaudeCodeInfo},
-    {(size_t)-1, SettingType::Comment, 0},
-    {offsetof(Settings, grokBuild), SettingType::Struct, (intptr_t)&gGrokBuildInfo},
-    {(size_t)-1, SettingType::Comment, 0},
-    {offsetof(Settings, codexBuild), SettingType::Struct, (intptr_t)&gCodexBuildInfo},
-    {(size_t)-1, SettingType::Comment, 0},
-    {offsetof(Settings, antiGravity), SettingType::Struct, (intptr_t)&gAntiGravityInfo},
-    {(size_t)-1, SettingType::Comment, 0},
-    {offsetof(Settings, aiChatSidebarDx), SettingType::Int, 0, true},
     {(size_t)-1, SettingType::Comment, 0},
     {offsetof(Settings, translateToLang), SettingType::String, (intptr_t)"", true},
     {offsetof(Settings, translateFromLang), SettingType::String, (intptr_t)"", true},
@@ -2282,37 +2052,34 @@ static const FieldInfo gSettingsFields[] = {
     {offsetof(Settings, fileStates), SettingType::Array, (intptr_t)&gFileStateInfo, true},
     {offsetof(Settings, sessionData), SettingType::Array, (intptr_t)&gSessionDataInfo, true},
     {offsetof(Settings, reopenOnce), SettingType::StringArray, 0, true},
-    {offsetof(Settings, timeOfLastUpdateCheck), SettingType::Compact, (intptr_t)&gFILETIMEInfo, true},
     {offsetof(Settings, openCountWeek), SettingType::Int, 0, true},
     {offsetof(Settings, propWinPos), SettingType::Compact, (intptr_t)&gPointInfo, true},
-    {offsetof(Settings, checkForUpdates), SettingType::Bool, true, true},
     {(size_t)-1, SettingType::Comment, 0, true},
     {(size_t)-1, SettingType::Comment, (intptr_t)"Settings below are not recognized by the current version", true},
 };
 static const StructInfo gSettingsInfo = {
     sizeof(Settings),
-    162,
+    148,
     gSettingsFields,
     "\0\0DefaultDisplayMode\0DefaultZoom\0DisableJavaScript\0AllowExternalImages\0EnableTeXEnhancements\0EscToExit\0Ful"
     "lPathInTitle\0InverseSearchCmdLine\0LazyLoading\0MainWindowBackground\0NoHomeTab\0HomePageSortByFrequentlyRead\0Ho"
     "mePageViewMode\0FilePicker\0PrinterUI\0ReloadModifiedDocuments\0RememberOpenedFiles\0RememberStatePerDocument\0Res"
     "toreSession\0ReuseInstance\0ShowMenubar\0ShowMenubarWithTabs\0ShowPageNumberInTabs\0ShowHomePageReadingProgress\0S"
-    "howChaptersInEbooks\0ShowTips\0CustomColors\0ShowToolbar\0Toolbar\0ToolbarPosition\0SearchUIFloating\0ShowFavorite"
-    "s\0SortFavoritesByName\0ShowToc\0AlwaysShowSidebar\0SidebarOnRight\0SidebarWindowSize\0ShowLinks\0HighlightFormFie"
-    "lds\0ClickEdgeToTurnPage\0DisableLinks\0ExplorerQuickLook\0RememberViewOffsetOnPageTurn\0MouseWheelTurnsPage\0Scro"
-    "llEdgeTurnsPage\0ShowDocumentFocusIndicator\0ShowAnnotationNotification\0ShowFileNavigateHint\0ShowAnnotationAutho"
-    "rInTooltip\0ShowTocPageNumbers\0AutoGenerateTOC\0ShowStartPage\0SidebarDx\0Scrollbars\0ScrollbarInSinglePage\0Smoo"
-    "thScroll\0ScrollLineAmount\0SaveMemory\0PaddingAfterLastPage\0IgnoreDestinationZoom\0HighlightLinkDestination\0Cit"
-    "ationHoverDelay\0ReadAloudVoiceId\0ReadAloudSpeed\0ReadingAutoScrollSpeed\0ReadingBar\0FastScrollOverScrollbar\0Pr"
-    "eventSleepInFullscreen\0TabWidth\0Theme\0HelpTheme\0LastLightTheme\0LastDarkTheme\0DocumentColorsFollowTheme\0TocD"
-    "y\0ToolbarCustomLayout\0ToolbarShowReadAloud\0ToolbarSize\0TreeFontName\0TreeFontSize\0UIFontSize\0DisableAntiAlia"
-    "s\0EngineeringDrawingEnhance\0DisableAutoLinks\0UseSysColors\0UseTabs\0SelectionToolbar\0SelectionToolbarLayout\0T"
-    "absMru\0CtrlTabSimple\0ZoomLevels\0ZoomIncrement\0\0FixedPageUI\0\0EBookUI\0\0ComicBookUI\0\0ImageUI\0\0ChmUI\0\0M"
-    "arkdownUI\0\0HtmlUI\0\0ClaudeCode\0\0GrokBuild\0\0CodexBuild\0\0AntiGravity\0\0AIChatSidebarDx\0\0TranslateToLang"
-    "\0TranslateFromLang\0TranslateEngine\0\0Annotations\0\0ExternalViewers\0\0ForwardSearch\0\0PrinterDefaults\0\0Full"
-    "screen\0\0SelectionHandlers\0\0TextSnippets\0\0Shortcuts\0\0Themes\0\0TabGroups\0\0CustomScreenDPI\0\0\0DefaultPas"
-    "swords\0UiLanguage\0VersionToSkip\0WindowState\0WindowPos\0SearchUIWindowPos\0HelpWindowPos\0FileStates\0SessionDa"
-    "ta\0ReopenOnce\0TimeOfLastUpdateCheck\0OpenCountWeek\0PropWinPos\0CheckForUpdates\0\0",
+    "howChaptersInEbooks\0ShowTips\0CustomColors\0ShowToolbar\0Toolbar\0ToolbarPosition\0SearchUIFloating\0ShowToc\0Alw"
+    "aysShowSidebar\0SidebarOnRight\0SidebarWindowSize\0ShowLinks\0HighlightFormFields\0ClickEdgeToTurnPage\0DisableLin"
+    "ks\0ExplorerQuickLook\0RememberViewOffsetOnPageTurn\0MouseWheelTurnsPage\0ScrollEdgeTurnsPage\0ShowDocumentFocusIn"
+    "dicator\0ShowAnnotationNotification\0ShowFileNavigateHint\0ShowAnnotationAuthorInTooltip\0ShowTocPageNumbers\0Auto"
+    "GenerateTOC\0ShowStartPage\0SidebarDx\0Scrollbars\0ScrollbarInSinglePage\0SmoothScroll\0ScrollLineAmount\0SaveMemo"
+    "ry\0PaddingAfterLastPage\0IgnoreDestinationZoom\0HighlightLinkDestination\0CitationHoverDelay\0ReadAloudVoiceId\0R"
+    "eadAloudSpeed\0ReadingAutoScrollSpeed\0ReadingBar\0FastScrollOverScrollbar\0PreventSleepInFullscreen\0TabWidth\0Th"
+    "eme\0HelpTheme\0LastLightTheme\0LastDarkTheme\0DocumentColorsFollowTheme\0TocDy\0ToolbarCustomLayout\0ToolbarShowR"
+    "eadAloud\0ToolbarSize\0TreeFontName\0TreeFontSize\0UIFontSize\0DisableAntiAlias\0EngineeringDrawingEnhance\0Disabl"
+    "eAutoLinks\0UseSysColors\0UseTabs\0SelectionToolbar\0SelectionToolbarLayout\0TabsMru\0CtrlTabSimple\0ZoomLevels\0Z"
+    "oomIncrement\0\0FixedPageUI\0\0EBookUI\0\0ComicBookUI\0\0ImageUI\0\0ChmUI\0\0MarkdownUI\0\0HtmlUI\0\0TranslateToLa"
+    "ng\0TranslateFromLang\0TranslateEngine\0\0Annotations\0\0ExternalViewers\0\0ForwardSearch\0\0PrinterDefaults\0\0Fu"
+    "llscreen\0\0SelectionHandlers\0\0TextSnippets\0\0Shortcuts\0\0Themes\0\0TabGroups\0\0CustomScreenDPI\0\0\0DefaultP"
+    "asswords\0UiLanguage\0VersionToSkip\0WindowState\0WindowPos\0SearchUIWindowPos\0HelpWindowPos\0FileStates\0Session"
+    "Data\0ReopenOnce\0OpenCountWeek\0PropWinPos\0\0",
     "\0\0default layout of pages. valid values: automatic, single page, facing, book view, continuous, continuous "
     "facing, continuous book view, page aspect. page aspect (3.7+): first open of a PDF, XPS, DjVu or PostScript file "
     "uses page 1 — taller than wide is continuous + fit width, wider than tall is single page + fit page; a remembered "
@@ -2321,7 +2088,7 @@ static const StructInfo gSettingsInfo = {
     "true, a PDF may load an image stored in a separate file referenced by name (an external image stream); the file "
     "must sit next to the PDF. Off by default for security (matches Acrobat)\0if true, show the SyncTeX inverse search "
     "command line in Settings -> Options, so a double-click in the document can jump to the matching line in a LaTeX "
-    "editor\0if true, Esc key closes SumatraPDF. In presentation or fullscreen mode, Esc leaves that mode first\0if "
+    "editor\0if true, Esc key closes MithenPDF. In presentation or fullscreen mode, Esc leaves that mode first\0if "
     "true, show the full path to the document in the title bar\0pattern used to launch the LaTeX editor when doing "
     "inverse search\0if true, restoring a session delays loading each document until its tab is selected\0background "
     "color of the area around the document, traditionally yellow. Only applies to the Light theme; the default "
@@ -2330,25 +2097,23 @@ static const StructInfo gSettingsInfo = {
     "opened (the pre-3.6 behavior); if false, the most recently opened come first\0valid values: thumbnails, "
     "list\0valid values: (empty), os, sumatrapdf\0valid values: (empty), auto, modern, classic\0if true, a document "
     "will be reloaded automatically whenever it's changed (currently doesn't work for documents shown in the ebook "
-    "UI)\0if true, keep a history of opened documents and their display settings (FileStates); closing a document "
-    "doesn't remove it from the history. Also required for saving SessionData\0if true, store display settings for "
-    "each document separately (i.e. everything after UseDefaultState in FileStates)\0if true, documents that were "
-    "still open when the last window was closed (SessionData) are reopened at startup\0if true, open documents in the "
-    "already running SumatraPDF instead of starting a new one\0if true, show the menu bar (F9 toggles it; the choice "
-    "is remembered across sessions)\0if true, show the menu bar when using tabs (useTabs = true)\0if true, show the "
-    "current page as n/N after the file name on tabs\0if true, show reading progress (n/N, or chapter:page for ebooks) "
-    "on home page thumbnails and list rows\0if true, a document with chapters (EPUB, MOBI) shows the current place as "
-    "a chapter and a page within that chapter, in the toolbar, Go to Page and the page-info tip. if false, those show "
-    "one page number for the whole document. the saved position stays a chapter bookmark either way, and next / "
-    "previous page still cross chapters\0if true, show tips on the home page\0up to 13 custom colors for the "
-    "background color picker, separated by space (e.g. '#ff0000 #00ff00 #0000ff')\0legacy bool for toolbar; if Toolbar "
-    "is empty, derived as show/hide (internal; use Toolbar instead)\0toolbar mode: show (pinned), hide (no toolbar), "
-    "overlay (toolbar floats over the page, sized to its natural width and centered, only shown when the mouse is near "
-    "it). if empty, derived from ShowToolbar\0where the toolbar is placed: top or bottom (applies to both show and "
-    "overlay modes)\0if true, the find UI is a floating, movable window with a results list instead of the compact "
-    "toolbar overlay\0if true, show the Favorites sidebar\0if true, favorites within each file are sorted "
-    "alphabetically by name (or page label); if false (the default), they are sorted by page number\0if true, show the "
-    "table of contents (Bookmarks) sidebar when the document has one\0if true, every document with bookmarks opens "
+    "UI)\0if true, keep a history of opened documents and their display settings (MithenPDF defaults to false: opening "
+    "a file leaves no trace)\0if true, store display settings for each document separately (i.e. everything after "
+    "UseDefaultState in FileStates)\0if true, documents that were still open when the last window was closed "
+    "(SessionData) are reopened at startup\0if true, open documents in the already running SumatraPDF instead of "
+    "starting a new one\0if true, show the menu bar (F9 toggles it; the choice is remembered across sessions)\0if "
+    "true, show the menu bar when using tabs (useTabs = true)\0if true, show the current page as n/N after the file "
+    "name on tabs\0if true, show reading progress (n/N, or chapter:page for ebooks) on home page thumbnails and list "
+    "rows\0if true, a document with chapters (EPUB, MOBI) shows the current place as a chapter and a page within that "
+    "chapter, in the toolbar, Go to Page and the page-info tip. if false, those show one page number for the whole "
+    "document. the saved position stays a chapter bookmark either way, and next / previous page still cross "
+    "chapters\0if true, show tips on the home page\0up to 13 custom colors for the background color picker, separated "
+    "by space (e.g. '#ff0000 #00ff00 #0000ff')\0legacy bool for toolbar; if Toolbar is empty, derived as show/hide "
+    "(internal; use Toolbar instead)\0toolbar mode: show (pinned), hide (no toolbar), overlay (toolbar floats over the "
+    "page, sized to its natural width and centered, only shown when the mouse is near it). if empty, derived from "
+    "ShowToolbar\0where the toolbar is placed: top or bottom (applies to both show and overlay modes)\0if true, the "
+    "find UI is a floating, movable window with a results list instead of the compact toolbar overlay\0if true, show "
+    "the table of contents (Bookmarks) sidebar when the document has one\0if true, every document with bookmarks opens "
     "with the Bookmarks sidebar, even one that was closed with it hidden\0if true, put the bookmarks / favorites "
     "sidebar on the right of the window (left is the default; right-to-left UI languages already put it on the "
     "right)\0valid values: (empty), keep, grow\0if true, draw a blue border around links in the document\0if true, "
@@ -2434,13 +2199,10 @@ static const StructInfo gSettingsInfo = {
     "UseFixedPageUI switches to the PDF-style view; FontName applies to that view\0\0customization options for "
     "Markdown UI. If UseFixedPageUI is true, MuPDF is used; otherwise WebView2 browser view is used when "
     "available\0\0customization options for HTML UI. If UseFixedPageUI is true, MuPDF is used; otherwise WebView2 "
-    "browser view is used when available\0\0settings for the Claude Code chat sidebar\0\0settings for the Grok Build "
-    "chat sidebar\0\0settings for the OpenAI Codex chat sidebar\0\0settings for the Antigravity chat sidebar\0\0width "
-    "of the AI chat sidebar (0 = use default); shared by Claude Code, Grok Build, and OpenAI Codex "
-    "(internal)\0\0remembered destination language for selection translation; empty uses OS UI language\0remembered "
-    "source language for selection translation; empty means Auto\0remembered engine for Translate Selection: Google, "
-    "DeepL, Grok Build, Claude Code, OpenAI Codex or Antigravity\0\0default values for annotations in PDF "
-    "documents\0\0list of additional external viewers for various file types. See [docs for more "
+    "browser view is used when available\0\0remembered destination language for selection translation; empty uses OS "
+    "UI language\0remembered source language for selection translation; empty means Auto\0remembered engine for "
+    "Translate Selection: Google or DeepL\0\0default values for annotations in PDF documents\0\0list of additional "
+    "external viewers for various file types. See [docs for more "
     "information](https://www.sumatrapdfreader.org/docs/Customize-external-viewers)\0\0customization options for how "
     "forward search results are shown (used from LaTeX editors)\0\0these override the default settings in the Print "
     "dialog\0\0options for fullscreen mode\0\0list of handlers for selected text, shown in context menu when text "
@@ -2456,10 +2218,9 @@ static const StructInfo gSettingsInfo = {
     "window\0position/size of the floating find window (see SearchUIFloating)\0position/size of the in-app Help: "
     "Manual window\0history of opened files, most recently used first. A closed file stays here until it drops off the "
     "list or the history is cleared\0windows and tabs still open when SumatraPDF was last closed; reopened at startup "
-    "if RestoreSession is true\0data required for reloading documents after an auto-update\0data required to determine "
-    "when SumatraPDF last checked for updates\0value required to determine recency for the OpenCount value in "
-    "FileStates\0position of the document properties window\0if true, check once a day whether an update is "
-    "available\0\0Settings below are not recognized by the current version",
+    "if RestoreSession is true\0data required for reloading documents after an auto-update\0value required to "
+    "determine recency for the OpenCount value in FileStates\0position of the document properties window\0\0Settings "
+    "below are not recognized by the current version",
     false};
 static const FieldInfo gTheme_1_Fields[] = {
     {offsetof(Theme, name), SettingType::String, (intptr_t)""},

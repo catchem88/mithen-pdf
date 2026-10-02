@@ -161,8 +161,10 @@ struct PdfSignArgs {
 };
 
 void EngineMupdfGetUnsignedSignatureFields(EngineBase*, StrVec& names, Vec<int>& pageNos);
-bool IsUnsignedSignatureWidget(Annotation*, TempStr* fieldNameOut);
+bool IsUnsignedSignatureWidget(Annotation*, TempStr* fieldNameOut, bool requireUnsigned = true);
 bool EngineMupdfSignDocument(EngineBase*, const PdfSignArgs&, Str* errOut);
+// removes the signature from the signature field named `name` (clears /V)
+bool EngineMupdfRemoveSignatureByName(EngineBase*, Str name);
 void ListWindowsSigningCertificates(StrVec& thumbprints, StrVec& labels);
 void SetEutlLookupFn(bool (*fn)(const u8* der, int derLen));
 struct PdfSigCert {
@@ -177,6 +179,19 @@ Annotation* EngineMupdfGetAnnotationAtPos(EngineBase*, int pageNo, PointF pos, f
 Annotation* EngineMupdfGetWidgetAtPos(EngineBase*, int pageNo, PointF pos);
 void EngineMupdfGetPageWidgets(EngineBase*, int pageNo, Vec<Annotation*>& out);
 Annotation* EngineMupdfGetAdjacentWidget(EngineBase*, Annotation* cur, bool forward);
+Annotation* EngineMupdfGetWidgetByName(EngineBase*, int pageNo, Str name);
+// stable per-widget identity (its PDF object number)
+int EngineMupdfGetWidgetObjNum(Annotation*);
+Annotation* EngineMupdfGetWidgetByObjNum(EngineBase*, int pageNo, int objNum);
+// rebuild the cached widget list of one page (it can be stale right after an edit)
+void EngineMupdfResyncPageWidgets(EngineBase*, int pageNo);
+// Tab: the next fillable widget after the one with object number objNum on pageNo
+Annotation* EngineMupdfGetAdjacentWidgetByObjNum(EngineBase*, int pageNo, int objNum, bool forward,
+                                                 bool includeButtons = false);
+// Tab: the next fillable widget after the one named `name` on pageNo. When
+// includeButtons, checkboxes/radios are part of the order too.
+Annotation* EngineMupdfGetAdjacentWidgetByName(EngineBase*, int pageNo, Str name, bool forward,
+                                               bool includeButtons = false);
 void EngineMupdfGetFormFieldHighlightRects(EngineBase*, int pageNo, Annotation* skip, Vec<RectF>& out);
 void EngineMupdfSetDisableJavaScript(bool disable);
 float EngineMupdfSetEbookLayoutAspect(float dyOverDx);

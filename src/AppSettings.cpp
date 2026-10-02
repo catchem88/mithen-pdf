@@ -31,7 +31,6 @@
 #include "MainWindow.h"
 #include "DisplayModel.h"
 #include "AppTools.h"
-#include "Favorites.h"
 #include "Menu.h"
 #include "HomePage.h"
 #include "Toolbar.h"
@@ -222,7 +221,7 @@ static int cmpFloat(const float* a, const float* b) {
 }
 
 TempStr GetSettingsFileNameTemp() {
-    return str::DupTemp(StrL("SumatraPDF-settings.txt"));
+    return str::DupTemp(StrL("MithenPDF-settings.txt"));
 }
 
 // this could be virtual path when running in app store
@@ -990,7 +989,6 @@ static void ReloadSettings(bool force = false) {
         if (gSettings->showToolbar != showToolbar) {
             ShowOrHideToolbar(win);
         }
-        UpdateFavoritesTree(win);
         UpdateControlsColors(win);
         if (DisplayModel* dm = win->AsFixed()) {
             int dpi = win->frameDpi > 0 ? win->frameDpi : DpiGetForHwnd(win->hwndFrame);
@@ -1648,67 +1646,36 @@ void DeleteFileStates(Vec<FileState*>* a) {
     delete a;
 }
 
-Favorite* NewFavorite(Str pageNo, Str name, Str pageLabel) {
-    Favorite* fav = (Favorite*)DeserializeStruct(&gFavoriteInfo, {});
-    str::ReplaceWithCopy(&fav->pageNo, pageNo);
-    str::ReplaceWithCopy(&fav->name, name);
-    str::ReplaceWithCopy(&fav->pageLabel, pageLabel);
-    return fav;
-}
-
-Favorite* NewFavorite(int pageNo, Str name, Str pageLabel) {
-    return NewFavorite(FormatStoredPagePosTemp(pageNo), name, pageLabel);
-}
-
-void DeleteFavorite(Favorite* fav) {
-    FreeStruct(&gFavoriteInfo, fav);
-}
-
 Settings* NewSettings(Str data) {
     return (Settings*)DeserializeStruct(&gSettingsInfo, data);
 }
 
-// With file history turned off the only thing worth keeping about a file is a
-// favorite the user added on purpose. Everything else in a FileState is history
-// by definition, and some entries have no user content at all: searching
-// creates one just to hang the session-only "jump back here" favorite on
-// (SetSearchStartFavorite), which left a bare FilePath in the settings file of
-// someone who asked us not to remember opened files (issue #5899).
+// With file history turned off the only thing worth keeping about a file is
+// its per-document ebook settings: those are configuration the user typed,
+// not history.
 static bool FileStateWorthKeepingWithoutHistory(FileState* fs) {
     if (!fs) {
         return false;
     }
-    // per-document ebook settings are configuration the user typed, not history
-    if (fs->eBookUI) {
-        return true;
-    }
-    if (!fs->favorites) {
-        return false;
-    }
-    for (Favorite* fav : *fs->favorites) {
-        if (!fav->isTemporary) {
-            return true;
-        }
-    }
-    return false;
+    return fs->eBookUI != nullptr;
 }
 
 // FileState identity kept when RememberStatePerDocument is false. Display
 // fields (page, zoom, scroll, window) are omitted (#5907).
 static SeqStrings kFileStateKeepNoPerDoc =
-    "Favorites\0EBookUI\0FilePath\0DecryptionKey\0OpenCount\0IsPinned\0IsMissing\0UseDefaultState\0";
+    "EBookUI\0FilePath\0DecryptionKey\0OpenCount\0IsPinned\0IsMissing\0UseDefaultState\0";
 
 // prevData is used to preserve fields that exists in prevField but not in Settings
 // caller has to free()
 Str SerializeSettings(Settings* prefs, Str prevData) {
     Vec<FileState*>* allFileStates = prefs->fileStates;
-    Vec<FileState*> withFavorites;
+    Vec<FileState*> keptStates;
 
     // The two settings mean different things and must not be conflated (#5907):
     // RememberStatePerDocument = false only drops the per-document state (page,
     // zoom, scroll, window placement) - the list of files stays, because that is
     // what the home page shows. RememberOpenedFiles = false drops the list
-    // itself, keeping only files the user hung a favorite on (#5899).
+    // itself, keeping only per-document ebook settings.
     bool dropPerDocState = !prefs->rememberStatePerDocument || !prefs->rememberOpenedFiles;
     bool dropHistory = !prefs->rememberOpenedFiles;
 
@@ -1716,13 +1683,13 @@ Str SerializeSettings(Settings* prefs, Str prevData) {
         for (FileState* fs : *prefs->fileStates) {
             fs->useDefaultState = true;
             if (FileStateWorthKeepingWithoutHistory(fs)) {
-                VecAppend(withFavorites, fs);
+                VecAppend(keptStates, fs);
             }
         }
         if (dropHistory) {
             // serialize the filtered list, then put the real one back below -
             // the in-memory history is still needed for this session
-            prefs->fileStates = &withFavorites;
+            prefs->fileStates = &keptStates;
         }
         FieldInfo keepFields[dimof(gFileStateFields)];
         char keepNames[512];

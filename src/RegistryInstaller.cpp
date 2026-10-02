@@ -15,18 +15,18 @@
 // All registry manipulation needed for installer / uninstaller
 
 // list of supported file extensions for which SumatraPDF.exe will
-// be registered as a candidate for the Open With dialog's suggestions
-// clang-format off
-static SeqStrings gSupportedExts = 
-    ".pdf\0.xps\0.oxps\0.cbz\0.cbr\0.cb7\0.cbt\0" \
-    ".djvu\0.chm\0.mobi\0.epub\0.md\0.markdown\0.svg\0.azw\0.azw3\0.azw4\0" \
-    ".fb2\0.fb2z\0.prc\0.tif\0.tiff\0.jp2\0.png\0" \
-    ".jpg\0.jpeg\0.tga\0.gif\0.avif\0.heic\0.heif\0" \
-    ".jfif\0.webp\0.jxl\0.bmp\0.ico\0.jxr\0.hdp\0.wdp\0";
+// be registered as a candidate for the Open With dialog's suggestions.
+// MithenPDF deliberately does NOT register image / archive / markdown / plain
+// text / PostScript extensions: it can still open them when asked, but Windows
+// should not offer it as their handler. clang-format off
+static SeqStrings gSupportedExts =
+    ".pdf\0.xps\0.oxps\0.cbz\0.cbr\0.cb7\0.cbt\0"
+    ".djvu\0.chm\0.mobi\0.epub\0.azw\0.azw3\0.azw4\0"
+    ".fb2\0.fb2z\0.prc\0";
 
 // Image extensions share icon resource id 7 (img-32bit.ico) — #5274
 static SeqStrings gImageExts =
-    ".tif\0.tiff\0.jp2\0.png\0.jpg\0.jpeg\0.tga\0.gif\0.avif\0.heic\0.heif\0" \
+    ".tif\0.tiff\0.jp2\0.png\0.jpg\0.jpeg\0.tga\0.gif\0.avif\0.heic\0.heif\0"
     ".jfif\0.webp\0.jxl\0.bmp\0.ico\0.jxr\0.hdp\0.wdp\0";
 // clang-format on
 
@@ -149,7 +149,7 @@ static bool RegisterForDefaultPrograms(HKEY hkey, Str installedExePath) {
     // L"SOFTWARE\\SumatraPDF\\Capabilities"
     TempStr appCapabilityPath = str::JoinTemp(StrL("SOFTWARE\\"), StrL(kAppName), StrL("\\Capabilities"));
 
-    Str desc = StrL("SumatraPDF is a PDF reader.");
+    Str desc = StrL("MithenPDF is a PDF reader.");
     ok &= LoggedWriteRegStr(hkey, appCapabilityPath, StrL("ApplicationDescription"), desc);
     // ApplicationName must match the RegisteredApplications value name (kAppName).
     ok &= LoggedWriteRegStr(hkey, appCapabilityPath, StrL("ApplicationName"), StrL(kAppName));

@@ -73,7 +73,7 @@ void FileHistoryClear(bool keepFavorites) {
     HomePageInvalidateLayoutCache();
     Vec<FileState*> keep;
     for (int i = 0; i < len(*gStates); i++) {
-        if (keepFavorites && len(*(*gStates)[i]->favorites) > 0) {
+        if (keepFavorites) {
             (*gStates)[i]->openCount = 0;
             VecAppend(keep, (*gStates)[i]);
         } else {
@@ -231,9 +231,8 @@ void FileHistoryPurge(bool alwaysUseDefaultState) {
 
     for (int j = len(*gStates); j > 0; j--) {
         FileState* state = (*gStates)[j - 1];
-        // never forget pinned documents, documents we've remembered a password for and
-        // documents for which there are favorites
-        if (state->isPinned || len(state->decryptionKey) > 0 || len(*state->favorites) > 0) {
+        // never forget pinned documents or documents we've remembered a password for
+        if (state->isPinned || len(state->decryptionKey) > 0) {
             continue;
         }
         // NOLINTNEXTLINE(bugprone-branch-clone): each branch documents a different reason to forget

@@ -55,6 +55,7 @@ extern const char* gIconApplyRedactions;
 extern const char* gIconAnnotStamp;
 extern const char* gIconAnnotCaret;
 extern const char* gIconAnnotFileAttachment;
+extern const char* gIconInsertImage;
 extern const char* gIconTrash;
 extern const char* gIconArrowUp;
 extern const char* gIconHome;

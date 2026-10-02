@@ -34,6 +34,7 @@
 #include "SvgIcons.h"
 #include "FilterUtil.h"
 #include "FilterHighlightDraw.h"
+#include "ExplorerSort.h"
 #include "NavFilesInFolder.h"
 
 // A modeless directory browser listing sub-directories and files SumatraPDF
@@ -223,22 +224,48 @@ static bool CanOpenFile(Str path) {
     return IsSupportedFileType(kind, true) || DocIsSupportedFileType(kind);
 }
 
-// dirs first, then files, each sorted naturally by name.
+static Str NavEntryBaseName(const NavFileEntry& e);
+
+// Explorer's order for the folder being listed, when a window shows it; read
+// by CmpNavEntry so the list follows Explorer's sort column and direction.
+// Null while sorting anything else.
+static thread_local const ExplorerOrder* gNavOrder = nullptr;
+
+// Explorer's position for the entry, or INT_MAX when Explorer doesn't show it
+static int NavEntryExplorerRank(const NavFileEntry& e) {
+    int rank = ExplorerOrderRank(gNavOrder, NavEntryBaseName(e));
+    if (rank < 0) {
+        return INT_MAX;
+    }
+    return rank;
+}
+
+// dirs first, then files: each in Explorer's display order when it is known,
+// else sorted naturally by name.
 // qsort: the old insertion sort was O(n^2) and froze on huge folders.
 static int CmpNavEntry(const NavFileEntry* a, const NavFileEntry* b) {
     if (a->isDir != b->isDir) {
         return a->isDir ? -1 : 1;
     }
+    if (gNavOrder) {
+        int ra = NavEntryExplorerRank(*a);
+        int rb = NavEntryExplorerRank(*b);
+        if (ra != rb) {
+            return ra - rb;
+        }
+    }
     return str::CmpNatural(a->name, b->name);
 }
 
-static void SortNavEntries(Vec<NavFileEntry>& entries, int firstIdx) {
+static void SortNavEntries(Vec<NavFileEntry>& entries, int firstIdx, const ExplorerOrder* order) {
     int n = len(entries) - firstIdx;
     if (n <= 1) {
         return;
     }
+    gNavOrder = order;
     auto cmp = (int (*)(const void*, const void*))CmpNavEntry;
     qsort(entries.els + firstIdx, (size_t)n, sizeof(NavFileEntry), cmp);
+    gNavOrder = nullptr;
 }
 
 static void FreeNavEntries(Vec<NavFileEntry>& entries) {
@@ -257,8 +284,6 @@ static void StealNavEntries(Vec<NavFileEntry>& dst, Vec<NavFileEntry>& src) {
     src.len = 0;
     src.cap = 0;
 }
-
-static Str NavEntryBaseName(const NavFileEntry& e);
 
 // rebuild the shown entries: all of them without a filter, else those whose
 // name has every filter word (the command palette's matching), without ".."
@@ -444,7 +469,10 @@ static void CollectNavEntriesForDir(Str dir, Vec<NavFileEntry>& out) {
         VecAppend(out, e);
     }
 
-    SortNavEntries(out, firstIdx);
+    // follow Explorer's sort column and direction when a window shows this folder
+    ExplorerOrder* order = GetExplorerOrder(dir);
+    SortNavEntries(out, firstIdx, order);
+    FreeExplorerOrder(order);
 }
 
 static int FindEntryIndex(NavFilesInFolderWnd* wnd, ListBoxModelNav* m, Str selectPath);

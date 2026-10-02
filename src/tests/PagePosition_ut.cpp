@@ -175,27 +175,15 @@ void PagePosition_UnitTests() {
         // MigrateFileStatePagePos
         FileState fs{};
         fs.pageNo = str::Dup(StrL("12"));
-        Vec<Favorite*> favs;
-        Favorite fav1{};
-        fav1.pageNo = str::Dup(StrL("3"));
-        Favorite fav2{};
-        fav2.pageNo = str::Dup(StrL("bm:2:1:10"));
-        VecAppend(favs, &fav1);
-        VecAppend(favs, &fav2);
-        fs.favorites = &favs;
 
         migrated = MigrateFileStatePagePos(&ctrl, &fs);
         utassert(migrated);
         utassert(str::Eq(fs.pageNo, StrL("bm:2:7:10")));
-        utassert(str::Eq(fav1.pageNo, StrL("bm:1:3:5")));
-        utassert(str::Eq(fav2.pageNo, StrL("bm:2:1:10")));
 
         // running again does nothing
         migrated = MigrateFileStatePagePos(&ctrl, &fs);
         utassert(!migrated);
 
         str::Free(fs.pageNo);
-        str::Free(fav1.pageNo);
-        str::Free(fav2.pageNo);
     }
 }

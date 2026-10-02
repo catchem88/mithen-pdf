@@ -2000,6 +2000,7 @@ EXPORTS
 	pdf_drop_signer
 	pdf_sign_signature
 	pdf_create_signature_widget
+	pdf_clear_signature
 	pdf_widget_is_signed
 	pdf_load_field_name
 	pdf_keep_annot

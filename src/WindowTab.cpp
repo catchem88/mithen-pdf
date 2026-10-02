@@ -51,14 +51,9 @@ bool WindowTab::IsAboutTab() const {
     return type == WindowTab::Type::About;
 }
 
-bool WindowTab::IsFavoritesTab() const {
-    ReportIf(type == WindowTab::Type::None);
-    return type == WindowTab::Type::Favorites;
-}
-
-// About or Favorites: no document controller
+// About: no document controller
 bool WindowTab::IsNonDocumentTab() const {
-    return IsAboutTab() || IsFavoritesTab();
+    return IsAboutTab();
 }
 
 WindowTab::~WindowTab() {
@@ -130,14 +125,6 @@ WindowTab::~WindowTab() {
         ReadAloudHighlightFree(readAloudHighlight);
         delete readAloudHighlight;
     }
-    for (AIChatTabState& st : aiChat) {
-        str::Free(st.sessionId);
-        st.sessionId = {};
-        if (st.process) {
-            TerminateProcess(st.process, 0);
-            CloseHandle(st.process);
-        }
-    }
 }
 
 bool WindowTab::IsDocLoaded() const {
@@ -178,10 +165,6 @@ Str WindowTab::GetTabTitle() const {
     if (len(filePath) == 0) {
         if (IsAboutTab()) {
             return StrL("Home");
-        }
-        if (IsFavoritesTab()) {
-            // same label as Favorites menu / sidebar header
-            return Tr("Favorites");
         }
         return StrL("");
     }

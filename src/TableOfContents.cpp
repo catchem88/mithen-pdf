@@ -24,7 +24,6 @@
 #include "SumatraPDF.h"
 #include "MainWindow.h"
 #include "DisplayModel.h"
-#include "Favorites.h"
 #include "WindowTab.h"
 #include "resource.h"
 #include "Commands.h"
@@ -423,10 +422,10 @@ void ToggleTocBox(MainWindow* win) {
         return;
     }
     if (win->uiState.tocVisible) {
-        SetSidebarVisibility(win, false, gSettings->showFavorites, SidebarResizeFrame::Adjust);
+        SetSidebarVisibility(win, false, SidebarResizeFrame::Adjust);
         return;
     }
-    SetSidebarVisibility(win, true, gSettings->showFavorites, SidebarResizeFrame::Adjust);
+    SetSidebarVisibility(win, true, SidebarResizeFrame::Adjust);
     if (win->uiState.tocVisible) {
         HwndSetFocus(win->tocTreeView->hwnd);
     }
@@ -669,7 +668,7 @@ void ExpandTocToCurrentPage(MainWindow* win) {
     }
     // make sure the bookmarks (table of contents) sidebar is visible
     if (!win->uiState.tocVisible) {
-        SetSidebarVisibility(win, true, gSettings->showFavorites);
+        SetSidebarVisibility(win, true);
     }
     if (!win->tocLoaded || !win->uiState.tocVisible) {
         return;
@@ -787,19 +786,6 @@ static void SetInitialExpandState(TocItem* item, Vec<int>& tocState) {
         SetInitialExpandState(item->child, tocState);
         item = item->next;
     }
-}
-
-static void AddFavoriteFromToc(MainWindow* win, TocItem* dti) {
-    int pageNo = 0;
-    if (!dti) {
-        return;
-    }
-    if (dti->dest) {
-        pageNo = PageDestGetPageNo(dti->dest);
-    }
-    Str name = dti->title;
-    TempStr pageLabel = win->ctrl->GetPageLabeTemp(pageNo);
-    AddFavoriteWithLabelAndName(win, pageNo, pageLabel, name);
 }
 
 static void SaveAttachment(WindowTab* tab, Str fileName, int attachmentNo) {
@@ -982,15 +968,6 @@ static MenuDef menuDefContextToc[] = {
         TrN("Save Attachment..."),
         CmdSaveAttachment,
     },
-    // note: strings cannot be "" or else items are not there
-    {
-        StrL("Add to favorites"),
-        CmdFavoriteAdd,
-    },
-    {
-        StrL("Remove from favorites"),
-        CmdFavoriteDel,
-    },
     {
         {},
         0,
@@ -1000,7 +977,6 @@ static MenuDef menuDefContextToc[] = {
 
 static void TocContextMenu(ContextMenuEvent* ev) {
     MainWindow* win = FindMainWindowByHwnd(ev->w->hwnd);
-    Str filePath = win->ctrl->GetFilePath();
 
     Point pt{};
 
@@ -1061,33 +1037,6 @@ static void TocContextMenu(ContextMenuEvent* ev) {
         MenuRemove(popup, CmdOpenAttachment);
     }
 
-    if (pageNo > 0) {
-        bool isBookmarked = IsPageInFavorites(filePath, pageNo, win->ctrl);
-
-        TempStr addText;
-        TempStr delText;
-        if (win->ctrl->HasChapters()) {
-            Location loc = win->ctrl->LocationFromPageNo(pageNo);
-            addText = fmt(Tr("Add chapter %d page %d to favorites").s, loc.chapter, loc.page);
-            delText = fmt(Tr("Remove chapter %d page %d from favorites").s, loc.chapter, loc.page);
-        } else {
-            TempStr pageLabel = win->ctrl->GetPageLabeTemp(pageNo);
-            addText = fmt(Tr("Add page %s to favorites").s, pageLabel);
-            delText = fmt(Tr("Remove page %s from favorites").s, pageLabel);
-        }
-
-        if (isBookmarked) {
-            MenuRemove(popup, CmdFavoriteAdd);
-            MenuSetText(popup, CmdFavoriteDel, delText);
-        } else {
-            MenuRemove(popup, CmdFavoriteDel);
-            TempStr s = AppendAccelKeyToMenuStringTemp(addText, CmdFavoriteAdd);
-            MenuSetText(popup, CmdFavoriteAdd, s);
-        }
-    } else {
-        MenuRemove(popup, CmdFavoriteAdd);
-        MenuRemove(popup, CmdFavoriteDel);
-    }
     RemoveBadMenuSeparators(popup);
     MarkMenuOwnerDraw(popup);
     uint flags = TPM_RETURNCMD | TPM_RIGHTBUTTON;
@@ -1115,12 +1064,6 @@ static void TocContextMenu(ContextMenuEvent* ev) {
             break;
         case CmdExpandToCurrentPage:
             ExpandTocToCurrentPage(win);
-            break;
-        case CmdFavoriteAdd:
-            AddFavoriteFromToc(win, dti);
-            break;
-        case CmdFavoriteDel:
-            DelFavorite(filePath, pageNo, win->ctrl);
             break;
         case CmdSaveEmbeddedFile: {
             SaveEmbeddedFile(tab, path, fileName);
@@ -1567,7 +1510,7 @@ static void TocTreeSelectionChanged(TreeView::SelectionChangedEvent* ev) {
     GoToTocTreeItem(win, ev->selectedItem, allowExternal);
 }
 
-// Tab / Ctrl+Tab focus movement (also reused by Favorites tree)
+// Tab / Ctrl+Tab focus movement
 void TocTreeKeyDown2(TreeView::KeyDownEvent* ev);
 
 static void FocusTocFilterEdit(MainWindow* win) {
@@ -1598,8 +1541,7 @@ static void SelectFirstTocTreeItem(MainWindow* win) {
 }
 
 // TOC tree keyboard: Esc clears filter / focuses search; Up on first row returns
-// to the search box. Tab (and Ctrl+Tab) stay in TocTreeKeyDown2 so Favorites can
-// reuse that path.
+// to the search box. Tab (and Ctrl+Tab) stay in TocTreeKeyDown2.
 static void TocTreeKeyDown(TreeView::KeyDownEvent* ev) {
     MainWindow* win = FindMainWindowByHwnd(ev->treeView->hwnd);
     if (ev->keyCode == VK_ESCAPE) {

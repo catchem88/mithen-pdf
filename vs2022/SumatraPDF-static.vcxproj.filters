@@ -108,12 +108,6 @@
     <ClInclude Include="..\ext\darkmodelib\src\Version.h">
       <Filter>ext\darkmodelib\src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\AIChatCommon.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\AIChatPanel.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\Accelerators.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -222,10 +216,10 @@
     <ClInclude Include="..\src\ExplorerQuickLook.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ExternalViewers.h">
+    <ClInclude Include="..\src\ExplorerSort.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Favorites.h">
+    <ClInclude Include="..\src\ExternalViewers.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\FileHistory.h">
@@ -411,9 +405,6 @@
     <ClInclude Include="..\src\ShortcutParse.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SimpleBrowserWindow.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\StressTesting.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -457,9 +448,6 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Translations.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\UpdateCheck.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Version.h">
@@ -593,28 +581,7 @@
     <ClCompile Include="..\ext\webview2\WebView2Loader.cpp">
       <Filter>ext\webview2</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\AIAntiGravity.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AIChatCommon.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AIChatPanel.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AIClaudeCode.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AICodexBuild.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AIGrokBuild.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\Accelerators.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\AddFavoriteDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\AdvancedSettingsDialog.cpp">
@@ -660,9 +627,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ChangeColorDialog.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ChangeLanguageDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ChangeScrollbarDialog.cpp">
@@ -761,10 +725,10 @@
     <ClCompile Include="..\src\ExplorerQuickLook.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ExternalViewers.cpp">
+    <ClCompile Include="..\src\ExplorerSort.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\Favorites.cpp">
+    <ClCompile Include="..\src\ExternalViewers.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\FileHistory.cpp">
@@ -1028,9 +992,6 @@
     <ClCompile Include="..\src\SignDocumentDialog.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SimpleBrowserWindow.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\StressTesting.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -1098,9 +1059,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Uninstaller.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\UpdateCheck.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\WebpReader.cpp">

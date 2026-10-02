@@ -54,7 +54,7 @@ bool InstallPreviewDll(Str dllPath, bool allUsers) {
         Str ext2 = prev.ext2;
         ok = true;
 
-        TempStr displayName = fmt("SumatraPDF Preview (*%s)", ext);
+        TempStr displayName = fmt("MithenPDF Preview (*%s)", ext);
         // register class
         TempStr key = fmt("Software\\Classes\\CLSID\\%s", clsid);
         ok &= LoggedWriteRegStr(hkey, key, {}, displayName);

@@ -23,18 +23,13 @@
 #include "ExternalViewers.h"
 #include "FileHistory.h"
 #include "Installer.h"
-#include "AIChatCommon.h"
-#include "AIChatPanel.h"
 #include "ReadAloud.h"
-#include "Favorites.h"
-#include "UpdateCheck.h"
 #include "CommandAvailability.h"
 
 // clang-format off
 
 static UINT_PTR gNoDocWhitelist[] = {
     CmdOpenFile,
-    CmdOpenFileNoHistory,
     CmdOpenFileWithOSFilePicker,
     CmdOpenFileWithSumatraFilePicker,
     CmdToggleFilePicker,
@@ -47,12 +42,7 @@ static UINT_PTR gNoDocWhitelist[] = {
     CmdSetInverseSearch,
     CmdAdvancedSettings,
     CmdOpenSettingsFile,
-    CmdChangeLanguage,
     CmdChangeTheme,
-    CmdCheckUpdate,
-    CmdHelpOpenManual,
-    CmdHelpOpenManualOnWebsite,
-    CmdHelpOpenKeyboardShortcuts,
     CmdToggleKeyboardHelp,
     CmdHelpVisitWebsite,
     CmdHelpAbout,
@@ -80,14 +70,9 @@ static UINT_PTR gNoDocWhitelist[] = {
     CmdToggleWindowsSearchFilter,
     CmdInvertColors,
     CmdToggleGrayscale,
-    CmdFavoriteToggle,
-    CmdFavoriteShowInTab,
     CmdGoToHomePage,
     CmdShowLog,
-    CmdClearHistory,
-    CmdRemoveDeletedFilesFromHistory,
     CmdDeleteCachedFiles,
-    CmdReopenLastClosedFile,
     CmdListPrinters,
     CmdDebugCrashMe,
     CmdDebugCorruptMemory,
@@ -107,10 +92,6 @@ UINT_PTR disableIfNoSelection[] = {
     CmdTranslateSelection,
     CmdTranslateSelectionWithDeepL,
     CmdTranslateSelectionWithGoogle,
-    CmdTranslateSelectionWithGrokBuild,
-    CmdTranslateSelectionWithClaudeCode,
-    CmdTranslateSelectionWithOpenAICodex,
-    CmdTranslateSelectionWithAntiGravity,
     CmdSearchSelectionWithWikipedia,
     CmdSearchSelectionWithGoogleScholar,
     CmdSearchSelectionWithBing,
@@ -129,7 +110,6 @@ static UINT_PTR createAnnotFromSelection[] = {
 };
 
 static UINT_PTR removeIfNoInternetPerms[] = {
-    CmdCheckUpdate,
     CmdTranslateSelectionWithGoogle,
     CmdTranslateSelectionWithDeepL,
     CmdSearchSelectionWithGoogle,
@@ -140,8 +120,6 @@ static UINT_PTR removeIfNoInternetPerms[] = {
     CmdSearchSelectionWithWikipedia,
     CmdSearchSelectionWithGoogleScholar,
     CmdHelpVisitWebsite,
-    CmdHelpOpenManualOnWebsite,
-    CmdHelpOpenKeyboardShortcuts,
     CmdContributeTranslation,
     0,
 };
@@ -157,15 +135,6 @@ static UINT_PTR removeIfNoPrefsPerms[] = {
     CmdSetInverseSearch,
     CmdAdvancedSettings,
     CmdOpenSettingsFile,
-    CmdPinSelectedDocument,
-    CmdForgetSelectedDocument,
-    CmdFavoriteAdd,
-    CmdFavoriteDel,
-    CmdFavoriteToggle,
-    CmdFavoriteShowInTab,
-    CmdToggleFavoritesSort,
-    CmdGoToNextFavorite,
-    CmdGoToPrevFavorite,
     0,
 };
 
@@ -197,7 +166,6 @@ static UINT_PTR removeIfNoCopyPerms[] = {
 static UINT_PTR removeIfNoDiskAccessPerm[] = {
     CmdNewWindow,
     CmdOpenFile,
-    CmdOpenFileNoHistory,
     CmdOpenFileWithOSFilePicker,
     CmdOpenFileWithSumatraFilePicker,
     CmdToggleFilePicker,
@@ -215,14 +183,7 @@ static UINT_PTR removeIfNoDiskAccessPerm[] = {
     CmdContributeTranslation,
     CmdAdvancedSettings,
     CmdOpenSettingsFile,
-    CmdFavoriteAdd,
-    CmdFavoriteDel,
-    CmdFavoriteToggle,
-    CmdFavoriteShowInTab,
-    CmdToggleFavoritesSort,
     CmdOpenSelectedDocument,
-    CmdPinSelectedDocument,
-    CmdForgetSelectedDocument,
     CmdInvokeInverseSearch,
     CmdSetInverseSearch,
     CmdPasteClipboardImage,
@@ -291,13 +252,10 @@ static i32 gBlacklistCommandsFromPalette[] = {
     CmdNone,
     CmdCommandPalette,
     CmdCommandPaletteTOC,
-    CmdCommandPaletteFavorites,
     CmdNextTabSmart,
     CmdPrevTabSmart,
     CmdSetTheme,
     CmdOpenSelectedDocument,
-    CmdPinSelectedDocument,
-    CmdForgetSelectedDocument,
     CmdExpandAll,
     CmdCollapseAll,
     CmdTocExpandToLevel1,
@@ -305,7 +263,6 @@ static i32 gBlacklistCommandsFromPalette[] = {
     CmdTocExpandToLevel3,
     CmdTocCollapseSameLevel,
     CmdMoveFrameFocus,
-    CmdFavoriteDel,
     CmdPresentationWhiteBackground,
     CmdPresentationBlackBackground,
     CmdSaveEmbeddedFile,
@@ -314,8 +271,6 @@ static i32 gBlacklistCommandsFromPalette[] = {
     CmdOpenAttachment,
     CmdCreateShortcutToFile,
     CmdSetDocumentColorsFollowTheme,
-    CmdFileHistory,
-    CmdFavorite,
     0,
 };
 
@@ -498,30 +453,6 @@ CommandVisibility GetCommandVisibility(int cmdId, const AppCommandCtx& ctx, Comm
         return CommandVisibility::Show;
     }
 
-    if (cmdId == CmdAIChatWithClaudeCode || cmdId == CmdAIChatWithGrokBuild || cmdId == CmdAIChatWithOpenAICodex ||
-        cmdId == CmdAIChatWithAntiGravity) {
-        if (!IsAIChatAvailable()) {
-            return CommandVisibility::Hide;
-        }
-        // Hide (not disable) so the "AI chat with document" context submenu is
-        // empty and dropped for unsupported types (images, comics, DjVu, …).
-        if (!IsAIChatSupportedForTab(ctx.tab)) {
-            return CommandVisibility::Hide;
-        }
-    }
-    if (cmdId == CmdTranslateSelectionWithGrokBuild && !IsGrokBuildInstalled()) {
-        return CommandVisibility::Hide;
-    }
-    if (cmdId == CmdTranslateSelectionWithClaudeCode && !IsClaudeCodeInstalled()) {
-        return CommandVisibility::Hide;
-    }
-    if (cmdId == CmdTranslateSelectionWithOpenAICodex && !IsCodexBuildInstalled()) {
-        return CommandVisibility::Hide;
-    }
-    if (cmdId == CmdTranslateSelectionWithAntiGravity && !IsAntiGravityInstalled()) {
-        return CommandVisibility::Hide;
-    }
-
     if (surface == CommandSurface::Palette) {
         if (CmdIdInI32List(cmdId, gCommandsDebugOnly)) {
             if (!gIsDebugBuild) {
@@ -546,9 +477,6 @@ CommandVisibility GetCommandVisibility(int cmdId, const AppCommandCtx& ctx, Comm
                 return CommandVisibility::Hide;
             }
         }
-        if (cmdId == CmdInstallPrereleaseUpdate && !HasPendingPreReleaseUpdate()) {
-            return CommandVisibility::Hide;
-        }
     }
 
     if (CmdCloseOtherTabs == cmdId) {
@@ -559,9 +487,6 @@ CommandVisibility GetCommandVisibility(int cmdId, const AppCommandCtx& ctx, Comm
     }
     if (CmdCloseTabsToTheLeft == cmdId) {
         return ctx.canCloseTabsToLeft ? CommandVisibility::Show : CommandVisibility::Hide;
-    }
-    if (CmdReopenLastClosedFile == cmdId) {
-        return RecentlyCloseDocumentsCount() > 0 ? CommandVisibility::Show : CommandVisibility::Hide;
     }
     if (cmdId == CmdTabGroupSave) {
         if (surface == CommandSurface::Palette) {
@@ -724,10 +649,6 @@ CommandVisibility GetCommandVisibility(int cmdId, const AppCommandCtx& ctx, Comm
         }
     }
 
-    if ((cmdId == CmdGoToNextFavorite || cmdId == CmdGoToPrevFavorite) && !HasFavorites()) {
-        return CommandVisibility::Hide;
-    }
-
     if (cmdId == CmdDocumentExtractText) {
         bool canExtract = ctx.engineKind == kindEngineMupdf || ctx.engineKind == kindEngineDjVu;
         if (!canExtract || ctx.isImageCollection) {
@@ -851,10 +772,6 @@ CommandVisibility GetCommandVisibility(int cmdId, const AppCommandCtx& ctx, Comm
             return CommandVisibility::Hide;
         }
         return CommandVisibility::Disable;
-    }
-
-    if ((cmdId == CmdCheckUpdate) && gIsStoreBuild) {
-        return CommandVisibility::Hide;
     }
 
     if (!HasPermission(Perm::InternetAccess) && CmdIdInList(cmdId, removeIfNoInternetPerms)) {
