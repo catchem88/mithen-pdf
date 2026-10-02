@@ -1658,6 +1658,10 @@ static int TooltipInitialDelayMs() {
 }
 
 constexpr UINT_PTR kHomeAboutHoverTimerID = 100;
+constexpr UINT_PTR kHomeAboutHoverHideTimerID = 102;
+// long enough to cross from the title onto the popup. The cursor is read when
+// the timer fires, not when the leave message was queued.
+constexpr UINT kAboutHoverHideDelayMs = 200;
 
 static HomeChromeCtrl* HomeChrome(MainWindow* win) {
     if (!win || !win->homeRoot) {
@@ -1694,6 +1698,7 @@ static bool CursorOverAboutHover(HomeChromeCtrl* chrome) {
 static void CancelHomeAboutHoverTimer(MainWindow* win) {
     if (win && win->hwndCanvas) {
         KillTimer(win->hwndCanvas, kHomeAboutHoverTimerID);
+        KillTimer(win->hwndCanvas, kHomeAboutHoverHideTimerID);
     }
 }
 
@@ -1705,12 +1710,36 @@ static void HideHomeAboutHover(MainWindow* win) {
     }
 }
 
-static void OnHomeAboutHoverLeave(MainWindow* win) {
-    // left the dropdown; keep it only if the cursor is back on the title
-    if (CursorOverHomeLogo(HomeChrome(win))) {
+static bool CursorOverAboutOrLogo(MainWindow* win) {
+    HomeChromeCtrl* chrome = HomeChrome(win);
+    return CursorOverHomeLogo(chrome) || CursorOverAboutHover(chrome);
+}
+
+static void CALLBACK HomeAboutHoverHideTimerProc(HWND hwnd, UINT, UINT_PTR id, DWORD) {
+    KillTimer(hwnd, id);
+    MainWindow* win = FindMainWindowByHwnd(hwnd);
+    if (!win || !IsMainWindowValidAndNotClosing(win)) {
+        return;
+    }
+    if (CursorOverAboutOrLogo(win)) {
         return;
     }
     HideHomeAboutHover(win);
+}
+
+static void ScheduleHideHomeAboutHover(MainWindow* win) {
+    if (!win || !win->hwndCanvas || CursorOverAboutOrLogo(win)) {
+        return;
+    }
+    HomeChromeCtrl* chrome = HomeChrome(win);
+    if (!chrome || !chrome->aboutHover || !chrome->aboutHover->IsVisible()) {
+        return;
+    }
+    SetTimer(win->hwndCanvas, kHomeAboutHoverHideTimerID, kAboutHoverHideDelayMs, HomeAboutHoverHideTimerProc);
+}
+
+static void OnHomeAboutHoverLeave(MainWindow* win) {
+    ScheduleHideHomeAboutHover(win);
 }
 
 static void CALLBACK HomeAboutHoverTimerProc(HWND hwnd, UINT, UINT_PTR id, DWORD) {
@@ -1735,11 +1764,7 @@ static void OnHomeLogoEnter(MainWindow* win) {
 }
 
 static void OnHomeLogoLeave(MainWindow* win) {
-    // still on the title→dropdown path (cursor already over the popup)
-    if (CursorOverAboutHover(HomeChrome(win))) {
-        return;
-    }
-    HideHomeAboutHover(win);
+    ScheduleHideHomeAboutHover(win);
 }
 
 // chrome-less About box under the home-page logo; links stay clickable
@@ -1793,6 +1818,7 @@ HomeChromeCtrl::~HomeChromeCtrl() {
     HWND hwnd = GetHwnd();
     if (hwnd) {
         KillTimer(hwnd, kHomeAboutHoverTimerID);
+        KillTimer(hwnd, kHomeAboutHoverHideTimerID);
     }
     delete aboutHover;
     aboutHover = nullptr;
@@ -1903,16 +1929,24 @@ bool HomePageOnCanvasMessage(MainWindow* win, UINT msg, WPARAM wp, LPARAM lp, LR
                 LRESULT ignored = 0;
                 root->OnMessage(msg, wp, lp, ignored);
             } else {
-                HideHomeAboutHover(win);
+                ScheduleHideHomeAboutHover(win);
             }
         }
         return false;
     }
     if (msg != WM_SETCURSOR) {
         bool didHandle = root->OnMessage(msg, wp, lp, res);
-        // canvas got the mouse and it is not on the title: left the SumatraPDF area
+        // moving outside the entries band (or off the canvas) drops the active
+        // entry, so the close button goes away
+        if (msg == WM_MOUSEMOVE && !root->hovered) {
+            HomeEntriesCtrl* entries = HomeEntries(win);
+            if (entries) {
+                entries->SetActiveEntry(-1);
+            }
+        }
+        // not on the title: the popup closes once the cursor has settled off it
         if (msg == WM_MOUSEMOVE && !IsVirtCtrlOfKind(root->hovered, kindSumatraLogo)) {
-            HideHomeAboutHover(win);
+            ScheduleHideHomeAboutHover(win);
         }
         return didHandle;
     }
