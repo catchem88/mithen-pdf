@@ -2116,7 +2116,19 @@ void HomePageOnWindowActivate(MainWindow* win, bool active) {
     }
     if (!active || IsIconic(win->hwndFrame)) {
         win->DeleteToolTip();
-        HideHomeAboutHover(win);
+        // a click in the no-activate About popup can report WA_INACTIVE while
+        // the frame is still the foreground window; don't close it then
+        HWND fg = GetForegroundWindow();
+        HomeChromeCtrl* chrome = HomeChrome(win);
+        bool stillUs = fg == win->hwndFrame || (chrome && chrome->aboutHover && fg == chrome->aboutHover->native);
+        if (!stillUs) {
+            HideHomeAboutHover(win);
+        }
+        return;
+    }
+    // only restore the selection tip (positioned at the active entry, not cursor)
+    if (win->IsCurrentTabAbout()) {
+        HomePageShowSelectionTooltip(win);
     }
 }
 
