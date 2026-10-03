@@ -868,7 +868,7 @@ int NormalizeRotation(int rotation);
 using ThreadId = DWORD;
 using ThreadHandle = HANDLE;
 
-struct Mutex {
+struct Mutex : NonCopyable {
     SRWLOCK lock = SRWLOCK_INIT;
 
     Mutex() = default;
@@ -879,7 +879,7 @@ struct Mutex {
     bool TryLock() { return TryAcquireSRWLockExclusive(&lock); }
 };
 
-struct ConditionVariable {
+struct ConditionVariable : NonCopyable {
     CONDITION_VARIABLE cond = CONDITION_VARIABLE_INIT;
 
     ConditionVariable() = default;
@@ -890,7 +890,7 @@ struct ConditionVariable {
     void WakeAll() { WakeAllConditionVariable(&cond); }
 };
 
-struct RecursiveMutex {
+struct RecursiveMutex : NonCopyable {
     CRITICAL_SECTION lock;
 
     RecursiveMutex() { InitializeCriticalSection(&lock); }
@@ -901,14 +901,14 @@ struct RecursiveMutex {
     bool TryLock() { return TryEnterCriticalSection(&lock); }
 };
 
-struct AutoUnlockMutex {
+struct AutoUnlockMutex : NonCopyable {
     Mutex* mutex;
 
     explicit AutoUnlockMutex(Mutex* mutex) : mutex(mutex) { mutex->Lock(); }
     ~AutoUnlockMutex() { mutex->Unlock(); }
 };
 
-struct AutoUnlockRecursiveMutex {
+struct AutoUnlockRecursiveMutex : NonCopyable {
     RecursiveMutex* mutex;
 
     explicit AutoUnlockRecursiveMutex(RecursiveMutex* mutex) : mutex(mutex) { mutex->Lock(); }
