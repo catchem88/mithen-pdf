@@ -7,7 +7,7 @@
 import { ControlCommand, withControlledSumatra } from "./control.ts";
 import { EXE, runStandalone } from "./util.ts";
 
-const kPdfCmds = ["CmdPdShowInfo", "CmdPdfCompress", "CmdPdfExtractPages", "CmdPdfEncrypt"];
+const kPdfCmds = ["CmdPdfShowInfo", "CmdPdfCompress", "CmdPdfExtractPages", "CmdPdfEncrypt"];
 
 async function vis(client: { request: Function }, cmd: string): Promise<string> {
   const res = await client.request(ControlCommand.TestCommandVisibility, [cmd, "menu"]);

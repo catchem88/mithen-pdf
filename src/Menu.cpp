@@ -1061,7 +1061,7 @@ static MenuDef menuDefDocumentOperations[] = {
     },
     {
         TrN("Show PDF Info"),
-        CmdPdShowInfo,
+        CmdPdfShowInfo,
     },
     {
         TrN("Show Document Table Of Contents"),
