@@ -44,6 +44,12 @@ relative to `ext/mupdf`, so `-p1` from inside that directory.
 | `0040-svg-css-class-styles` | SVG `class="st0"` resolved against the `<style>` sheet; such files drew all black (#2155) |
 | `0042-merge-backwards-range-bookmarks` | `merge` with a range like `3-1` renumbers the bookmarks too |
 | `0043-merge-exit-code-on-failure` | `merge` exits 1 when an input or the save fails |
+<<<<<<< HEAD
+=======
+| `0044-svg-unsized-image` | `<image>` with no width/height uses the raster's pixel size; a percentage `<svg>` with no viewBox adopts that size (#6266) |
+| `0045-console-utf8-via-writeconsolew` | UTF-8 to a Windows console through `WriteConsoleW`; the CRT failed the write on a DBCS code page (#6276) |
+| `0046-grep-keep-page-of-pending-line` | `grep` read a text page the search had already dropped (#6276) |
+>>>>>>> 5fd74adde (Fix grep crash and console write (fixes #6276))
 
 That is the whole list: `ext/mupdf` is byte-for-byte `1.28.5` plus these
 patches, and nothing else.
