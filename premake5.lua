@@ -1289,6 +1289,8 @@ workspace "SumatraPDF"
     darkmodelib_files()
 
     webview_conf()
+    quirc_files()
+    ocr_conf()
 
     synctex_files()
     gui_files()
@@ -1403,6 +1405,8 @@ workspace "SumatraPDF"
     setup_base_pch()
 
     webview_conf()
+    quirc_files()
+    ocr_conf()
 
     debugdir(".")
 

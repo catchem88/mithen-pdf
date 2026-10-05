@@ -353,6 +353,7 @@ const commandsRaw = [
     "CmdZoomFitVisible", "Zoom: Fit Visible",
     "CmdSignWithImage", "Sign With Image",
     "CmdInsertTextSnippet", "Insert Text Snippet",
+    "CmdOcr", "OCR",
 ];
 
 // removed slots are dropped: nothing outside the generators should see them
@@ -364,6 +365,8 @@ export const commands: string[] = commandsRaw.filter((_, i) => commandsRaw[i - (
 export const commandAltDescs: [string, string][] = [
     ["CmdNavigateFilesInFolder", "Browse Files In Folder..."],
     ["CmdAdvancedSettings", "Advanced Options..."],
+    ["CmdOcr", "Recognize Text (OCR)"],
+    ["CmdOcr", "Scan For QR Codes"],
 ];
 
 function getNames(): string[] {

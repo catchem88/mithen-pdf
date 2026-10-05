@@ -31,6 +31,8 @@ void RegisterCanvasDropTarget(HWND hwndCanvas);
 void RevokeCanvasDropTarget(HWND hwndCanvas);
 void FillCanvasThemeBackground(HWND hwndCanvas);
 void DisconnectLastDragDataObject();
+// sets the canvas cursor (a no-op while the laser pointer is on)
+void SetCanvasCursor(MainWindow* win, LPWSTR cursorId);
 
 // Timer for mouse wheel smooth scrolling
 constexpr UINT_PTR kSmoothScrollTimerID = 6;

@@ -229,7 +229,7 @@ static bool SetLaserPointerCursor(MainWindow* win) {
 
 // canvas code sets its cursor through this instead of SetCursorCached() so
 // that the laser pointer can take over
-static void SetCanvasCursor(MainWindow* win, LPWSTR cursorId) {
+void SetCanvasCursor(MainWindow* win, LPWSTR cursorId) {
     if (SetLaserPointerCursor(win)) {
         return;
     }
@@ -1815,6 +1815,14 @@ static Annotation* AnnotationLockingMouse(MainWindow* win) {
 static bool gPressOnlyDeselected = false;
 
 static void OnMouseMove(MainWindow* win, int x, int y, WPARAM key) {
+    // while OCR results are shown only the recognized lines are interactive
+    if (OcrIsShown(win)) {
+        SetCanvasCursor(win, OcrUpdateHover(win, Point{x, y}) >= 0 ? IDC_HAND : IDC_ARROW);
+        return;
+    }
+    if (OcrIsRunning(win)) {
+        return;
+    }
     if (ReadingBarOnMouseMove(win, x, y)) {
         return;
     }
@@ -2333,6 +2341,10 @@ static void OpenOrSelectEditAnnotation(WindowTab* tab, Annotation* annot, Point 
 }
 
 static void OnMouseLeftButtonDown(MainWindow* win, int x, int y, WPARAM key) {
+    // OCR swallows the press; a click is acted on in OnMouseLeftButtonUp
+    if (OcrIsRunning(win) || OcrIsShown(win)) {
+        return;
+    }
     // lf("Left button clicked on %d %d", x, y);
     gPressOnlyDeselected = false;
     if (IsRightDragging(win)) {
@@ -2613,6 +2625,14 @@ static void OnMouseLeftButtonDown(MainWindow* win, int x, int y, WPARAM key) {
 }
 
 static void OnMouseLeftButtonUp(MainWindow* win, int x, int y, WPARAM key) {
+    // a click on a recognized line copies its text
+    if (OcrIsShown(win)) {
+        OcrClickCopy(win, Point{x, y});
+        return;
+    }
+    if (OcrIsRunning(win)) {
+        return;
+    }
     if (ReadingBarOnLeftUp(win)) {
         return;
     }
@@ -4079,6 +4099,9 @@ static bool DrawDocument(MainWindow* win, HDC hdc, Rect rcArea) {
     PaintKeyboardLinkTargets(win, &gfx);
     PaintKeyboardTextCaret(win, &gfx);
 
+    // OCR overlay is drawn last, on top of everything else (see Ocr.cpp)
+    OcrPaint(win, &gfx, hdc);
+
     if (!rendering) {
         DebugShowLinks(dm, hdc);
         DebugShowFitContentArea(dm, hdc);
@@ -5395,6 +5418,14 @@ static LRESULT WndProcCanvasFixedPageUI(MainWindow* win, HWND hwnd, UINT msg, WP
                 (win->lastInputWasTouch || IsMouseMessageFromTouch()) && OnTouchLongPress(win, x, y)) {
                 return 0;
             }
+            // while OCR results are shown a right-click closes them
+            if (OcrIsShown(win)) {
+                OcrClose(win);
+                return 0;
+            }
+            if (OcrIsRunning(win)) {
+                return 0;
+            }
             OnWindowContextMenu(win, x, y);
             return 0;
         }
@@ -5642,6 +5673,10 @@ static void OnTimer(MainWindow* win, HWND hwnd, WPARAM timerId) {
             // page-number edit flash on every scroll even when the page is
             // unchanged (very visible with tall comic pages).
             HwndInvalidate(hwnd);
+            break;
+
+        case kOcrSpinTimerID:
+            OcrTickSpin(win);
             break;
 
         case kAnnotationResizeRerenderTimerID:

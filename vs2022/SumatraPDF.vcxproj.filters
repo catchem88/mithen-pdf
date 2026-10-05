@@ -13,6 +13,9 @@
     <Filter Include="ext\darkmodelib\src">
       <UniqueIdentifier>{3A2F0B1B-A690-E828-2FFE-2EDB9B5E1FE8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ext\quirc">
+      <UniqueIdentifier>{89AD55FD-F517-0A74-3E56-BB19AAFFE7C8}</UniqueIdentifier>
+    </Filter>
     <Filter Include="ext\synctex">
       <UniqueIdentifier>{73E6124D-DF9B-8B42-6890-8519D4448246}</UniqueIdentifier>
     </Filter>
@@ -306,6 +309,9 @@
     <ClInclude Include="..\src\Notifications.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\Ocr.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\OverlayScrollbar.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -572,6 +578,18 @@
     <ClCompile Include="..\ext\darkmodelib\src\DmlibWinApi.cpp">
       <Filter>ext\darkmodelib\src</Filter>
     </ClCompile>
+    <ClCompile Include="..\ext\quirc\decode.c">
+      <Filter>ext\quirc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\quirc\identify.c">
+      <Filter>ext\quirc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\quirc\quirc.c">
+      <Filter>ext\quirc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ext\quirc\version_db.c">
+      <Filter>ext\quirc</Filter>
+    </ClCompile>
     <ClCompile Include="..\ext\synctex\synctex_parser.c">
       <Filter>ext\synctex</Filter>
     </ClCompile>
@@ -831,6 +849,9 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Notifications.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Ocr.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\OverlayScrollbar.cpp">

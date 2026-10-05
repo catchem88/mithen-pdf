@@ -1168,6 +1168,10 @@ static MenuDef menuDefContext[] = {
         kMenuSeparatorID,
     },
     {
+        TrN("&OCR"),
+        CmdOcr,
+    },
+    {
         TrN("Document"),
         (UINT_PTR)menuDefDocumentOperations,
     },

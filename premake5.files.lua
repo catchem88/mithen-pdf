@@ -285,6 +285,7 @@ function sumatrapdf_files()
     "MarkdownToc.*",
     "EmbeddedResources.*",
     "ExplorerSort.*",
+    "Ocr.*",
     "CommandAvailability.*",
     "CommandPalette.*",
     "FilterUtil.*",
@@ -418,6 +419,32 @@ function sumatrapdf_files()
   files_in_dir("src/base", {
     "Archive.*",
   })
+  filter {}
+end
+
+function quirc_files()
+  includedirs { "ext/quirc" }
+  files {
+    "ext/quirc/quirc.c",
+    "ext/quirc/identify.c",
+    "ext/quirc/decode.c",
+    "ext/quirc/version_db.c",
+  }
+  -- vendored third-party C: don't fail our build on its warnings
+  filter { "files:ext/quirc/**" }
+    warnings "Off"
+    buildoptions { "/WX-" }
+  filter {}
+end
+
+function ocr_conf()
+  -- Ocr.cpp talks to the WinRT OCR API through C++/WinRT, which needs C++
+  -- exceptions (the rest of the app is built without them)
+  filter { "files:src/Ocr.cpp" }
+    exceptionhandling "On"
+    buildoptions { "/EHsc" }
+    -- the PCH is built without exceptions; don't mix it in
+    enablepch "Off"
   filter {}
 end
 

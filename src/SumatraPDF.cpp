@@ -9404,6 +9404,14 @@ static WCHAR SingleCharLowerW(WCHAR c) {
 }
 
 static void OnFrameKeyEsc(MainWindow* win) {
+    // Esc closes the OCR results (and does nothing while one is running)
+    if (OcrIsShown(win)) {
+        OcrClose(win);
+        return;
+    }
+    if (OcrIsRunning(win)) {
+        return;
+    }
     if (win->isQuickLook) {
         CloseWindow(win, true, false);
         return;
@@ -12398,7 +12406,15 @@ static LRESULT FrameOnCommand(MainWindow* win, HWND hwnd, UINT msg, WPARAM wp, L
             break;
 
         case CmdCopySelection:
+            // with OCR results on screen Ctrl+C copies all recognized text
+            if (OcrCopyAll(win)) {
+                break;
+            }
             CopySelectionInTabToClipboard(tab);
+            break;
+
+        case CmdOcr:
+            OcrStart(win);
             break;
 
         case CmdCopyAnnotation:

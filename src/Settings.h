@@ -1908,7 +1908,7 @@ static const StructInfo gPointInfo = {
 
 static const FieldInfo gSettingsFields[] = {
     {(size_t)-1, SettingType::Comment,
-     (intptr_t)"For documentation, see https://www.sumatrapdfreader.org/settings/settings3-7.html"},
+     (intptr_t)"For documentation, see https://www.sumatrapdfreader.org/settings/settings1-0-0.html"},
     {(size_t)-1, SettingType::Comment, 0},
     {offsetof(Settings, defaultDisplayMode), SettingType::String, (intptr_t)"automatic"},
     {offsetof(Settings, defaultZoom), SettingType::String, (intptr_t)"fit page"},

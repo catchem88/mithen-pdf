@@ -306,6 +306,7 @@ static SeqStrings gCommandNames =
     "CmdZoomFitVisible\0"
     "CmdSignWithImage\0"
     "CmdInsertTextSnippet\0"
+    "CmdOcr\0"
     "\0";
 
 static i32 gCommandIds[] = {
@@ -601,6 +602,7 @@ static i32 gCommandIds[] = {
     CmdZoomFitVisible,
     CmdSignWithImage,
     CmdInsertTextSnippet,
+    CmdOcr,
 };
 
 SeqStrings gCommandDescriptions =
@@ -896,16 +898,21 @@ SeqStrings gCommandDescriptions =
     "Zoom: Fit Visible\0"
     "Sign With Image\0"
     "Insert Text Snippet\0"
+    "OCR\0"
     "\0";
 
 SeqStrings gCommandAltDescs =
     "Browse Files In Folder...\0"
     "Advanced Options...\0"
+    "Recognize Text (OCR)\0"
+    "Scan For QR Codes\0"
     "\0";
 
 i32 gCommandAltDescIds[] = {
     CmdNavigateFilesInFolder,
     CmdAdvancedSettings,
+    CmdOcr,
+    CmdOcr,
 };
 // clang-format on
 // @gen-end cmd-c

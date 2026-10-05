@@ -58,7 +58,7 @@ static ACCEL gBuiltInAccelerators[] = {
     {FSHIFT | FVIRTKEY, VK_BACK, CmdNavigateForward},
     {FALT | FVIRTKEY, VK_RIGHT, CmdNavigateForward},
 
-    {FCONTROL | FVIRTKEY, 'O', CmdOpenFile},
+    {FCONTROL | FVIRTKEY, 'O', CmdOcr},
     {FSHIFT | FCONTROL | FVIRTKEY, VK_RIGHT, CmdOpenNextFileInFolder},
     {FSHIFT | FCONTROL | FVIRTKEY, VK_LEFT, CmdOpenPrevFileInFolder},
     {FSHIFT | FCONTROL | FVIRTKEY, VK_UP, CmdNavigateFilesInFolder},

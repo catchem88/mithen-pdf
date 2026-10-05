@@ -38,6 +38,8 @@ struct FindBarWnd;
 struct FindWindowWnd;
 struct ToolbarVirt;
 
+#include "Ocr.h"
+
 constexpr int kMaxKeyboardLinkHintLength = 9;
 
 // One link labeled by keyboard link following (CmdToggleKeyboardLinkFollowing).
@@ -539,6 +541,9 @@ struct MainWindow { // NOLINT(clang-analyzer-optin.performance.Padding)
 
     ThreadHandle printThread = nullptr;
     bool printCanceled = false;
+
+    // OCR of the page shown in the canvas (see Ocr.h / Ocr.cpp)
+    OcrState ocr;
 
     ThreadHandle findThread = nullptr;
     bool findCancelled = false;

@@ -301,8 +301,9 @@ enum {
     CmdZoomFitVisible = 525,
     CmdSignWithImage = 526,
     CmdInsertTextSnippet = 527,
+    CmdOcr = 528,
 
-    CmdLast = 527,
+    CmdLast = 528,
     CmdFirstCustom = CmdLast + 100,
 
     // aliases, at the end to not mess ordering
