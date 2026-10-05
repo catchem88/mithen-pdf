@@ -941,7 +941,8 @@ struct Settings {
     // at their physical size; if 0 or negative, the resolution reported by
     // Windows is used
     int customScreenDPI;
-    // default state of new windows (same as the last closed)
+    // default state of new windows (same as the last closed, 2 is
+    // maximized)
     int windowState;
     // week count since 2011-01-01 needed to "age" openCount values in file
     // history
@@ -1908,7 +1909,7 @@ static const StructInfo gPointInfo = {
 
 static const FieldInfo gSettingsFields[] = {
     {(size_t)-1, SettingType::Comment,
-     (intptr_t)"For documentation, see https://www.sumatrapdfreader.org/settings/settings1-0-0.html"},
+     (intptr_t)"For documentation, see https://www.sumatrapdfreader.org/settings/settings1-1-0.html"},
     {(size_t)-1, SettingType::Comment, 0},
     {offsetof(Settings, defaultDisplayMode), SettingType::String, (intptr_t)"automatic"},
     {offsetof(Settings, defaultZoom), SettingType::String, (intptr_t)"fit page"},
@@ -2045,7 +2046,7 @@ static const FieldInfo gSettingsFields[] = {
     {offsetof(Settings, defaultPasswords), SettingType::StringArray, 0, true},
     {offsetof(Settings, uiLanguage), SettingType::String, 0, true},
     {offsetof(Settings, versionToSkip), SettingType::String, 0, true},
-    {offsetof(Settings, windowState), SettingType::Int, 1, true},
+    {offsetof(Settings, windowState), SettingType::Int, 2, true},
     {offsetof(Settings, windowPos), SettingType::Compact, (intptr_t)&gRectInfo, true},
     {offsetof(Settings, searchUIWindowPos), SettingType::Compact, (intptr_t)&gRect_1_Info, true},
     {offsetof(Settings, helpWindowPos), SettingType::Compact, (intptr_t)&gRect_2_Info, true},

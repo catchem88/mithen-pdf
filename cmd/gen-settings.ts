@@ -1864,7 +1864,7 @@ const globalPrefs: Field[] = [
     "[ISO code](langs.html) of the current UI language",
   ),
   field("VersionToSkip", Str, null, "SumatraPDF won't offer to update to this version again"),
-  field("WindowState", Int, 1, "default state of new windows (same as the last closed)").doc(
+  field("WindowState", Int, 2, "default state of new windows (same as the last closed, 2 is maximized)").doc(
     "default state of the window. 1 is normal, 2 is maximized, " + "3 is fullscreen, 4 is minimized",
   ),
   compactStruct("WindowPos", windowPos, "default position (can be on any monitor)")
