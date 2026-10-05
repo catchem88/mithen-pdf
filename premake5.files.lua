@@ -286,8 +286,6 @@ function sumatrapdf_files()
     "EmbeddedResources.*",
     "ExplorerSort.*",
     "Ocr.*",
-    "PageThumbnails.*",
-    "MergePdf.*",
     "CommandAvailability.*",
     "CommandPalette.*",
     "FilterUtil.*",

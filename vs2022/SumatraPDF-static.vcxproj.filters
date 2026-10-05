@@ -300,9 +300,6 @@
     <ClInclude Include="..\src\Menu.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\MergePdf.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\MobiDoc.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -325,9 +322,6 @@
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\PageRenderService.h">
-      <Filter>src</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\PageThumbnails.h">
       <Filter>src</Filter>
     </ClInclude>
     <ClInclude Include="..\src\PalmDbReader.h">
@@ -845,9 +839,6 @@
     <ClCompile Include="..\src\Menu.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\MergePdf.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\MobiDoc.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -873,9 +864,6 @@
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PageRenderService.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\PageThumbnails.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\src\PalmDbReader.cpp">
