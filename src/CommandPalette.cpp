@@ -474,7 +474,7 @@ ThumbnailPaletteCtrl::ThumbnailPaletteCtrl(MainWindow* win, PlatformFont* font, 
 
     DisplayModel* dm = tab ? tab->AsFixed() : nullptr;
     pageCount = dm ? dm->PageCount() : 0;
-    selectedPage = dm ? Clamp(dm->CurrentPageNo(), 1, std::max(pageCount, 1)) : 1;
+    selectedPage = dm ? ClampI(dm->CurrentPageNo(), 1, std::max(pageCount, 1)) : 1;
 
     rowsModel = new ThumbnailRowsModel();
     rowsModel->rows = pageCount;
@@ -514,7 +514,7 @@ void ThumbnailPaletteCtrl::SetBounds(Rect r) {
     int reservedScrollbarDx = DpiScaleByDpi(dpi, 10);
     int availableDx = r.dx - padding.left - padding.right - reservedScrollbarDx;
     int newCols = (availableDx + gap) / (thumbDx + gap);
-    newCols = Clamp(newCols, 1, kPaletteThumbnailMaxCols);
+    newCols = ClampI(newCols, 1, kPaletteThumbnailMaxCols);
     if (newCols != cols) {
         cols = newCols;
         rowsModel->rows = (pageCount + cols - 1) / cols;
@@ -621,7 +621,7 @@ void ThumbnailPaletteCtrl::SelectPage(int pageNo) {
     if (pageCount <= 0) {
         return;
     }
-    pageNo = Clamp(pageNo, 1, pageCount);
+    pageNo = ClampI(pageNo, 1, pageCount);
     if (pageNo == selectedPage) {
         return;
     }
@@ -732,7 +732,7 @@ void ThumbnailPaletteCtrl::HandleKey(int vkey) {
         default:
             return;
     }
-    SelectPage(Clamp(pageNo, 1, pageCount));
+    SelectPage(ClampI(pageNo, 1, pageCount));
 }
 
 void ThumbnailPaletteCtrl::Activate() {
