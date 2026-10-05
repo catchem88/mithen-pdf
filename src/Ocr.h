@@ -28,7 +28,7 @@ struct OcrState {
 };
 
 // canvas timer that animates the spinner while a recognition runs
-constexpr UINT_PTR kOcrSpinTimerID = 17;
+constexpr UINT_PTR kOcrSpinTimerID = 30;
 
 // starts recognizing the page shown in the canvas; ignored while a recognition
 // runs or its results are already shown (Esc / right-click close those)

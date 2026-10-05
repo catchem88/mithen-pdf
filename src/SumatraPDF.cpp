@@ -5167,9 +5167,6 @@ void RerenderTabPage(WindowTab* tab, int pageNo) {
     if (win->CurrentTab() != tab) {
         return;
     }
-    if (win->pageThumbs && win->pageThumbs->active) {
-        win->pageThumbs->RefreshPage(pageNo);
-    }
     HwndInvalidate(win->hwndCanvas);
 }
 

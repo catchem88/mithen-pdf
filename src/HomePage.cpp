@@ -1938,12 +1938,6 @@ bool HomePageOnCanvasMessage(MainWindow* win, UINT msg, WPARAM wp, LPARAM lp, LR
         bool didHandle = root->OnMessage(msg, wp, lp, res);
         // moving outside the entries band (or off the canvas) drops the active
         // entry, so the close button goes away
-        if (msg == WM_MOUSEMOVE && !root->hovered) {
-            HomeEntriesCtrl* entries = HomeEntries(win);
-            if (entries) {
-                entries->SetActiveEntry(-1);
-            }
-        }
         // not on the title: the popup closes once the cursor has settled off it
         if (msg == WM_MOUSEMOVE && !IsVirtCtrlOfKind(root->hovered, kindSumatraLogo)) {
             ScheduleHideHomeAboutHover(win);
@@ -2125,10 +2119,6 @@ void HomePageOnWindowActivate(MainWindow* win, bool active) {
             HideHomeAboutHover(win);
         }
         return;
-    }
-    // only restore the selection tip (positioned at the active entry, not cursor)
-    if (win->IsCurrentTabAbout()) {
-        HomePageShowSelectionTooltip(win);
     }
 }
 
