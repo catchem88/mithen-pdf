@@ -6,6 +6,8 @@
 #include "base/File.h"
 #include "base/Crypto.h"
 
+#include <shlobj.h>
+
 #include "RegistryPreview.h"
 #include "SumatraLog.h"
 
@@ -40,6 +42,38 @@ static struct {
     {StrL(kMobiPreviewClsid), StrL(".mobi")},
 };
 // clang-format on
+
+// Explorer keeps each file's thumbnail - including a failed or missing one - in
+// thumbcache_*.db and does not ask the provider again while that entry is there.
+// A shell extension registered after a folder was first browsed therefore
+// leaves its files without a thumbnail for good, so drop the cache (and let the
+// shell know) when registering. Files Explorer holds open go on the next reboot.
+static void PurgeThumbnailCache() {
+    WCHAR localAppData[MAX_PATH]{};
+    if (!GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, dimof(localAppData))) {
+        return;
+    }
+    Str dir = ToUtf8Temp(WStr(localAppData));
+    TempStr pattern = fmt("%s\\Microsoft\\Windows\\Explorer\\thumbcache_*.db", dir);
+
+    WIN32_FIND_DATAW fd{};
+    HANDLE h = FindFirstFileW(CWStrTemp(pattern), &fd);
+    if (h == INVALID_HANDLE_VALUE) {
+        return;
+    }
+    int n = 0;
+    do {
+        TempStr path = fmt("%s\\Microsoft\\Windows\\Explorer\\%s", dir, ToUtf8Temp(WStr(fd.cFileName)));
+        if (DeleteFileW(CWStrTemp(path)) || MoveFileExW(CWStrTemp(path), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT)) {
+            n++;
+        }
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+    logf("PurgeThumbnailCache: removed %d thumbnail cache file(s)\n", n);
+
+    // also drops Explorer's in-memory copy
+    SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
+}
 
 bool InstallPreviewDll(Str dllPath, bool allUsers) {
     HKEY hkey = allUsers ? HKEY_LOCAL_MACHINE : HKEY_CURRENT_USER;
@@ -84,6 +118,7 @@ bool InstallPreviewDll(Str dllPath, bool allUsers) {
         }
     }
 
+    PurgeThumbnailCache();
     return true;
 }
 
