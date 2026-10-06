@@ -19,6 +19,7 @@
 #include "gui/GuiColors.h"
 #include "gui/VirtCtrl.h"
 
+#define INCLUDE_SETTINGSSTRUCTS_METADATA
 #include "Settings.h"
 #include "AppSettings.h"
 #include "DisplayMode.h"
