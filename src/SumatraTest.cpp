@@ -2849,3 +2849,32 @@ TempStr RefHoverResultTemp(Str action, int x, int y, int* exitCodeOut) {
     return fmt("OK visible=1 hwnd=%d page=%d y=%d zoom=%d", (int)(INT_PTR)s->hwndPopup, d.destPage, (int)d.region.y,
                (int)(d.userZoom * 100));
 }
+
+// The current tab's pages: each page's width, which a test gives a unique value
+// per page, and where the bookmarks point.
+TempStr PageInfoResultTemp(int* exitCodeOut) {
+    auto finish = [exitCodeOut](int code, TempStr s) -> TempStr {
+        if (exitCodeOut) {
+            *exitCodeOut = code;
+        }
+        return s;
+    };
+    MainWindow* win = len(gWindows) > 0 ? gWindows[0] : nullptr;
+    WindowTab* tab = win ? win->CurrentTab() : nullptr;
+    DisplayModel* dm = tab ? tab->AsFixed() : nullptr;
+    if (!dm) {
+        return finish(2, str::DupTemp(StrL("NOTREADY no-document")));
+    }
+    str::Builder out;
+    EngineBase* engine = dm->GetEngine();
+    out.Append(fmt("pages=%d widths=", engine->PageCount()));
+    for (int i = 1; i <= engine->PageCount(); i++) {
+        out.Append(fmt(i == 1 ? "%d" : ",%d", (int)(engine->PageMediabox(i).dx + 0.5f)));
+    }
+    out.Append(StrL(" toc="));
+    TocTree* toc = engine->GetToc();
+    for (TocItem* it = toc && toc->root ? toc->root->child : nullptr; it; it = it->next) {
+        out.Append(fmt("%s:%d;", it->title, it->pageNo));
+    }
+    return finish(0, fmt("OK %s", ToStrTemp(out)));
+}

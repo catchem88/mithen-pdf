@@ -10315,7 +10315,9 @@ bool EngineMupdfMergePdfs(const Vec<PdfMergeSource>& srcs, const Vec<PdfMergePag
 // Step one operation back (or forward with redo). Returns false if there was
 // nothing to step to. The wrappers in removedOut are detached from the document
 // already; the caller must take them out of the UI and delete them.
-static bool EngineMupdfUndoRedo(EngineBase* engine, bool redo, Vec<Annotation*>& removedOut, TocTree** oldTocOut) {
+static bool EngineMupdfUndoRedo(EngineBase* engine, bool redo, Vec<Annotation*>& removedOut) {
+    TocTree* oldTocPtr = nullptr;
+    TocTree** oldTocOut = &oldTocPtr;
     VecReset(removedOut);
     *oldTocOut = nullptr;
     EngineMupdf* e = AsEngineMupdf(engine);
@@ -10363,12 +10365,12 @@ static bool EngineMupdfUndoRedo(EngineBase* engine, bool redo, Vec<Annotation*>&
     return true;
 }
 
-bool EngineMupdfUndo(EngineBase* engine, Vec<Annotation*>& removedOut, TocTree** oldTocOut) {
-    return EngineMupdfUndoRedo(engine, false, removedOut, oldTocOut);
+bool EngineMupdfUndo(EngineBase* engine, Vec<Annotation*>& removedOut) {
+    return EngineMupdfUndoRedo(engine, false, removedOut);
 }
 
-bool EngineMupdfRedo(EngineBase* engine, Vec<Annotation*>& removedOut, TocTree** oldTocOut) {
-    return EngineMupdfUndoRedo(engine, true, removedOut, oldTocOut);
+bool EngineMupdfRedo(EngineBase* engine, Vec<Annotation*>& removedOut) {
+    return EngineMupdfUndoRedo(engine, true, removedOut);
 }
 
 // The journal knows exactly whether the document differs from the file, which

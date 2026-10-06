@@ -276,3 +276,9 @@ bool SaveDataToFile(HWND hwndParent, Str fileName, Str data) {
 #endif
     return ok;
 }
+
+static const char* kSidebarViewNames[kSidebarViewCount] = {"bookmarks", "thumbnails", "favorites"};
+
+Str SidebarViewToStr(SidebarView v) {
+    return Str(kSidebarViewNames[(int)v]);
+}

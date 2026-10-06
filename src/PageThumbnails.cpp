@@ -27,6 +27,7 @@
 #include "SumatraPDF.h"
 #include "PagePosition.h"
 #include "PageThumbnails.h"
+#include "SumatraTest.h"
 
 constexpr int kThumbnailDx = 120;
 constexpr int kThumbnailDy = 170;
@@ -700,4 +701,24 @@ void PageThumbnailsCtrl::StartRendering() {
     AtomicIntSet(&cache->cancelRendering, 0);
     cache->workerRunning = true;
     RunAsync(MkFunc0<ThumbnailRenderWorker>(RenderThumbnailsInBackground, worker), StrL("PageThumbnailsRender"));
+}
+
+// The sidebar's thumbnails view, for tests: whether it shows and the current page.
+// (No SidebarPanel/favorites in this fork, so only the thumbnail facts are reported.)
+TempStr SidebarThumbnailsResultTemp(int* exitCodeOut) {
+    auto finish = [exitCodeOut](int code, TempStr s) -> TempStr {
+        if (exitCodeOut) {
+            *exitCodeOut = code;
+        }
+        return s;
+    };
+    MainWindow* win = len(gWindows) > 0 ? gWindows[0] : nullptr;
+    PageThumbnailsCtrl* thumbs = win ? win->pageThumbs : nullptr;
+    if (!thumbs) {
+        return finish(2, str::DupTemp(StrL("NOTREADY no-window")));
+    }
+    str::Builder out;
+    out.Append(fmt("hwnd=%d thumbnails=%d count=%d current=%d rendered=%d", (int)(intptr_t)win->hwndTocBox,
+                   (int)thumbs->IsVisible(), thumbs->pageCount, thumbs->selectedPage, thumbs->RenderedCount()));
+    return finish(0, fmt("OK %s", ToStrTemp(out)));
 }
