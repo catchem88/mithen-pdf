@@ -890,8 +890,8 @@ struct Settings {
     FixedPageUI fixedPageUI;
     // default values for annotations in PDF documents
     Annotations annotations;
-    // width of the favorites / bookmarks sidebar in screen pixels, as last
-    // resized (0 means the default)
+    // width of the bookmarks / thumbnails sidebar in screen pixels (0
+    // means the default)
     int sidebarDx;
     // distance, in screen pixels at 96 DPI, scrolled by an arrow-key press
     // or one mouse-wheel line; values below 1 use 16
@@ -1961,7 +1961,7 @@ static const FieldInfo gSettingsFields[] = {
     {offsetof(Settings, showTocPageNumbers), SettingType::Bool, true},
     {offsetof(Settings, autoGenerateTOC), SettingType::Bool, false},
     {offsetof(Settings, showStartPage), SettingType::Bool, false},
-    {offsetof(Settings, sidebarDx), SettingType::Int, 0, true},
+    {offsetof(Settings, sidebarDx), SettingType::Int, 150, true},
     {offsetof(Settings, scrollbars), SettingType::String, (intptr_t)"windows"},
     {offsetof(Settings, scrollbarInSinglePage), SettingType::Bool, false},
     {offsetof(Settings, smoothScroll), SettingType::Bool, true},
@@ -2138,14 +2138,14 @@ static const StructInfo gSettingsInfo = {
     "\"Author: <author>\"\0if true, show page numbers (labels) right-aligned on bookmark / table-of-contents "
     "entries\0if true, a PDF without an outline gets a table of contents built from numbered headings in its text "
     "(Generate Table Of Contents command does it on demand)\0if true, show a list of frequently read documents when no "
-    "document is loaded\0width of the favorites / bookmarks sidebar in screen pixels, as last resized (0 means the "
-    "default)\0scrollbar mode: windows (standard Windows scrollbar), smart (overlay scrollbar with auto-hide), overlay "
-    "(always visible overlay scrollbar), hidden (no scrollbars)\0if true, show a scrollbar in single page mode as "
-    "well\0if true, smooth mouse-wheel and arrow-key scrolling (exponential chase of the target; continuous input "
-    "stays fluid)\0distance, in screen pixels at 96 DPI, scrolled by an arrow-key press or one mouse-wheel line; "
-    "values below 1 use 16\0how hard to free unused page and image caches to save RAM (0 to 100). 0 keeps them until "
-    "an allocation fails; 100 drops them as soon as a page is off-screen\0if true, continuous view has extra scroll "
-    "room after the last page so you can scroll the end of the document to the top of the window\0if true, going to a "
+    "document is loaded\0width of the bookmarks / thumbnails sidebar in screen pixels (0 means the default)\0scrollbar "
+    "mode: windows (standard Windows scrollbar), smart (overlay scrollbar with auto-hide), overlay (always visible "
+    "overlay scrollbar), hidden (no scrollbars)\0if true, show a scrollbar in single page mode as well\0if true, "
+    "smooth mouse-wheel and arrow-key scrolling (exponential chase of the target; continuous input stays "
+    "fluid)\0distance, in screen pixels at 96 DPI, scrolled by an arrow-key press or one mouse-wheel line; values "
+    "below 1 use 16\0how hard to free unused page and image caches to save RAM (0 to 100). 0 keeps them until an "
+    "allocation fails; 100 drops them as soon as a page is off-screen\0if true, continuous view has extra scroll room "
+    "after the last page so you can scroll the end of the document to the top of the window\0if true, going to a "
     "destination (clicking a bookmark or a link inside the document) keeps the current zoom instead of applying the "
     "zoom the destination asks for; it still goes to the page and the position. Same as Adobe Reader's 'forbid the "
     "change of the current zoom factor during execution of Go to Destination actions'\0if true, following an internal "

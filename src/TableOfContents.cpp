@@ -14,6 +14,7 @@
 #include "gui/PlatformFont.h"
 #include "gui/Gfx.h"
 #include "gui/VirtCtrl.h"
+#include "PageThumbnails.h"
 
 #include "Settings.h"
 #include "AppSettings.h"
@@ -1846,6 +1847,12 @@ void CreateToc(MainWindow* win) {
     ReportIf(!treeView->hwnd);
     win->tocTreeView = treeView;
 
+    // page thumbnails: the other view of this sidebar (CmdNavigateThumbnail),
+    // shown instead of the tree; both live in the same box
+    win->pageThumbs =
+        new PageThumbnailsCtrl(win, GetAppTreeFont(), DpiGetForHwnd(win->hwndFrame), ThumbnailsHost::Sidebar);
+    win->pageThumbs->SetIsVisible(false);
+
     // stack label, filter edit and tree vertically; the tree flexes to fill the
     // remaining height. The VBox owns these controls/spacer (freed in ~MainWindow).
     auto* vbox = new VBox();
@@ -1855,6 +1862,7 @@ void CreateToc(MainWindow* win) {
     vbox->AddChild(filterEdit);
     vbox->AddChild(new Spacer(0, 2)); // gap under the search field
     vbox->AddChild(treeView, 1);
+    vbox->AddChild(win->pageThumbs, 1);
     win->tocLayout = vbox;
 
     SubclassToc(win);

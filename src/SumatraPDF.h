@@ -159,6 +159,10 @@ enum class SidebarResizeFrame {
     Adjust
 };
 void SetSidebarVisibility(MainWindow* win, bool tocVisible, SidebarResizeFrame = SidebarResizeFrame::Keep);
+// sidebar Thumbnails view (CmdNavigateThumbnail): shows page thumbnails in the
+// sidebar instead of the bookmarks tree
+void SetThumbnailsPanelVisible(MainWindow* win, bool visible);
+void ToggleThumbnailsPanel(MainWindow* win);
 void AdvanceFocus(MainWindow* win);
 void SetCurrentLanguageAndRefreshUI(Str langCode);
 void UpdateDocumentColors();

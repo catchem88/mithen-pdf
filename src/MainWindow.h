@@ -37,6 +37,7 @@ struct TocItem;
 struct FindBarWnd;
 struct FindWindowWnd;
 struct ToolbarVirt;
+struct PageThumbnailsCtrl;
 
 #include "Ocr.h"
 
@@ -276,6 +277,10 @@ struct MainWindow { // NOLINT(clang-analyzer-optin.performance.Padding)
     // VBox(label, filter edit, tree); owns those three controls and lays them
     // out in hwndTocBox
     ILayout* tocLayout = nullptr;
+    // page-thumbnails view of the same sidebar (CmdNavigateThumbnail): shown
+    // instead of the bookmarks tree, never both at once
+    PageThumbnailsCtrl* pageThumbs = nullptr;
+    bool sidebarShowsThumbnails = false;
 
     // whether the current tab's ToC has been loaded into the tree
     bool tocLoaded = false;

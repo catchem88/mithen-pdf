@@ -5,6 +5,10 @@ struct PageThumbnailsCache;
 struct ThumbnailRowsModel;
 struct Location;
 struct Pixmap;
+struct MainWindow;
+struct WindowTab;
+struct DisplayModel;
+class EngineBase;
 
 enum class ThumbnailsHost {
     // the command palette's "&" mode: the page under the mouse is selected,

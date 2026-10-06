@@ -1497,8 +1497,8 @@ const globalPrefs: Field[] = [
   field(
     "SidebarDx",
     Int,
-    0,
-    "width of the favorites / bookmarks sidebar in screen pixels, as last resized (0 means the default)",
+    150,
+    "width of the bookmarks / thumbnails sidebar in screen pixels (0 means the default)",
   ).internal(),
   field(
     "Scrollbars",

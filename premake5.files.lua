@@ -288,6 +288,7 @@ function sumatrapdf_files()
     "Ocr.*",
     "CommandAvailability.*",
     "CommandPalette.*",
+    "PageThumbnails.*",
     "FilterUtil.*",
     "FilterHighlightDraw.*",
     "Commands.*",

@@ -70,6 +70,7 @@
 #include "AppTools.h"
 #include "ExplorerSort.h"
 #include "Canvas.h"
+#include "PageThumbnails.h"
 #include "RefHover.h"
 #include "base/CrashHandler.h"
 #include "ExternalViewers.h"
@@ -3234,8 +3235,12 @@ static void UpdateToolbarSidebarText(MainWindow* win) {
     UpdateToolbarFindText(win);
     UpdateToolbarButtonsToolTipsForWindow(win);
 
-    win->tocLabel->SetText(Tr("Bookmarks"));
+    win->tocLabel->SetText(win->sidebarShowsThumbnails ? Tr("Thumbnails") : Tr("Bookmarks"));
     win->tocLabel->Invalidate();
+    // the thumbnails panel follows the current tab's document
+    if (win->sidebarShowsThumbnails && win->pageThumbs) {
+        win->pageThumbs->SetTab(win->CurrentTab());
+    }
 }
 
 static Color DwmFrameBorderColorForCurrentTheme() {
@@ -9963,7 +9968,7 @@ void SetSidebarVisibility(MainWindow* win, bool tocVisible, SidebarResizeFrame r
     EngineBase* engine = win->CurrentTab() ? win->CurrentTab()->GetEngine() : nullptr;
     bool headingPending = EngineMupdfHeadingTocPending(engine);
 
-    if (!win->IsDocLoaded() || !win->ctrl || !win->ctrl->HasToc()) {
+    if (!win->IsDocLoaded() || !win->ctrl || (!win->ctrl->HasToc() && !win->sidebarShowsThumbnails)) {
         tocVisible = false;
     }
 
@@ -9971,7 +9976,8 @@ void SetSidebarVisibility(MainWindow* win, bool tocVisible, SidebarResizeFrame r
         tocVisible = false;
     }
 
-    if (tocVisible) {
+    // the thumbnails view needs no table of contents
+    if (tocVisible && !win->sidebarShowsThumbnails) {
         LoadTocTree(win);
         if (!win->tocLoaded) {
             tocVisible = false;
@@ -10001,6 +10007,57 @@ void SetSidebarVisibility(MainWindow* win, bool tocVisible, SidebarResizeFrame r
         AdjustFrameForSidebar(win, nowSidebar);
     }
     ScheduleUiUpdate(win, kUiRelayout | kUiNoToolbars | kUiSidebarDirty);
+}
+
+// Swaps the sidebar between the bookmarks tree and the page thumbnails. The
+// sidebar stays a two-arg thing: the thumbnails are just the other view of the
+// same box, so nothing here needs a favorites panel.
+void SetThumbnailsPanelVisible(MainWindow* win, bool visible) {
+    if (!win->pageThumbs || win->sidebarShowsThumbnails == visible) {
+        return;
+    }
+    win->sidebarShowsThumbnails = visible;
+    win->pageThumbs->SetIsVisible(visible);
+    bool showTree = !visible;
+    if (win->tocTreeView) {
+        win->tocTreeView->SetIsVisible(showTree);
+    }
+    if (win->tocFilterEdit) {
+        win->tocFilterEdit->SetIsVisible(showTree);
+    }
+    // thumbnails only render while the control is active
+    if (visible) {
+        win->pageThumbs->SetTab(win->CurrentTab());
+        win->pageThumbs->Activate();
+    } else {
+        win->pageThumbs->Deactivate();
+    }
+    UpdateToolbarSidebarText(win);
+    if (win->hwndTocBox) {
+        // re-lay the box out: the collapsed control no longer takes a slot
+        SendMessageW(win->hwndTocBox, WM_SIZE, 0, 0);
+        HwndInvalidate(win->hwndTocBox, true);
+    }
+    Rect boxRc = win->hwndTocBox ? HwndClientRect(win->hwndTocBox) : Rect{};
+    logf("ThumbnailsPanel: thumbs=%d boxVisible=%d box=%d,%d %dx%d tree=%d\n", (int)win->pageThumbs->IsVisible(),
+         win->hwndTocBox ? (int)HwndIsVisible(win->hwndTocBox) : 0, boxRc.x, boxRc.y, boxRc.dx, boxRc.dy,
+         win->tocTreeView ? (int)win->tocTreeView->IsVisible() : -1);
+}
+
+void ToggleThumbnailsPanel(MainWindow* win) {
+    if (!win || !win->pageThumbs || !win->IsDocLoaded()) {
+        return;
+    }
+    if (win->sidebarShowsThumbnails) {
+        // pressing it again closes the sidebar
+        SetThumbnailsPanelVisible(win, false);
+        SetSidebarVisibility(win, false, SidebarResizeFrame::Adjust);
+        return;
+    }
+    // the panel first: SetSidebarVisibility has to know the thumbnails view is
+    // wanted, since it also opens for documents without a table of contents
+    SetThumbnailsPanelVisible(win, true);
+    SetSidebarVisibility(win, true, SidebarResizeFrame::Adjust);
 }
 
 constexpr const char* kUserLangStr = "${userlang}";
@@ -12428,7 +12485,7 @@ static LRESULT FrameOnCommand(MainWindow* win, HWND hwnd, UINT msg, WPARAM wp, L
             break;
 
         case CmdNavigateThumbnail:
-            RunCommandPalette(win, Str(kPalettePrefixThumbnails), 0);
+            ToggleThumbnailsPanel(win);
             break;
 
         case CmdSearchSelectionWithBing:
