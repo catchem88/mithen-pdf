@@ -254,59 +254,6 @@ static Pixmap* CopyHeapPixmapAsBgraDib(const Pixmap* px) {
     return dib;
 }
 
-// a 24bpp-worth (opaque) BGR DIB copy of a heap-backed BGR8 / RGBA8 / BGRA8
-// pixmap. Thumbnails only ever need the opaque pixels, so the alpha is 0xff.
-static Pixmap* CopyHeapPixmapAsBgrDib(const Pixmap* px) {
-    if (!px->data || PixmapBytesPerPixel(px->format) == 0) {
-        return nullptr;
-    }
-    Pixmap* dib = AllocPixmapDIB(px->width, px->height);
-    if (!dib) {
-        return nullptr;
-    }
-    for (int y = 0; y < px->height; y++) {
-        const u8* src = px->data + ((size_t)y * px->stride);
-        u8* dst = dib->data + ((size_t)y * dib->stride);
-        for (int x = 0; x < px->width; x++) {
-            if (px->format == PixmapFormat::BGR8) {
-                dst[0] = src[0];
-                dst[1] = src[1];
-                dst[2] = src[2];
-                src += 3;
-            } else if (px->format == PixmapFormat::RGBA8) {
-                dst[0] = src[2];
-                dst[1] = src[1];
-                dst[2] = src[0];
-                src += 4;
-            } else {
-                dst[0] = src[0];
-                dst[1] = src[1];
-                dst[2] = src[2];
-                src += 4;
-            }
-            dst[3] = 0xff;
-            dst += 4;
-        }
-    }
-    dib->xres = px->xres;
-    dib->yres = px->yres;
-    return dib;
-}
-
-// Takes p. Returns it when it already is opaque BGR8; otherwise an opaque
-// 32bpp DIB copy of it (pixels without alpha) and p is freed.
-Pixmap* PixmapToBgr(Pixmap* p) {
-    if (!p) {
-        return nullptr;
-    }
-    if (p->format == PixmapFormat::BGR8 && p->data) {
-        return p;
-    }
-    Pixmap* dib = p->hbmp ? PixmapCopyAs32bppDIB(p) : CopyHeapPixmapAsBgrDib(p);
-    FreePixmap(p);
-    return dib;
-}
-
 // Takes p. Returns it when its pixels already read as BGRA8; otherwise a
 // 32bpp DIB copy (the engine renders a page with few colors to an 8-bit
 // palette DIB, image engines decode to 24bpp) and p is freed.

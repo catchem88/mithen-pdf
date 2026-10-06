@@ -1061,7 +1061,7 @@ const fileState: Field[] = [
   ),
   compactStruct("WindowPos", windowPos, "default position (can be on any monitor)").structName("Rect"),
   field("ShowToc", Bool, true, "if true, show the table of contents (Bookmarks) sidebar when the document has one"),
-  field("ShowThumbnails", Bool, false, "if true, the sidebar shows page thumbnails instead of bookmarks").ver("3.7"),
+  field("SidebarView", Str, null, "what the sidebar's top panel shows: bookmarks (the default), thumbnails or favorites").ver("3.7"),
   field("SidebarDx", Int, 0, "width of the bookmarks / favorites sidebar in screen pixels, as last resized"),
   field("DisplayR2L", Bool, false, "if true, the document is displayed right-to-left in facing and book view modes"),
   field(
@@ -1129,7 +1129,7 @@ const fileStateLayout = [
   "IsMissing",
   "UseDefaultState",
   "ShowToc",
-  "ShowThumbnails",
+  "SidebarView",
   "DisplayR2L",
   "UniformPageWidth",
   "TrimEmptyMargins",
@@ -1163,7 +1163,7 @@ const tabState: Field[] = [
     "PointF",
   ),
   field("ShowToc", Bool, true, "if true, the table of contents was shown when the document was closed"),
-  field("ShowThumbnails", Bool, false, "if true, the sidebar showed page thumbnails instead of bookmarks").ver("3.7"),
+  field("SidebarView", Str, null, "what the sidebar's top panel showed: bookmarks, thumbnails or favorites").ver("3.7"),
   compactArray("TocState", Int, null, "which table of contents items were expanded (see FileStates -> TocState)"),
 ];
 

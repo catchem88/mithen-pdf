@@ -10069,7 +10069,6 @@ static void RebuildPages(EngineMupdf* e, Vec<Annotation*>& removedOut, TocTree**
             e->annotLoadStarted = false;
         }
     }
-    e->PagesChanged();
 }
 
 // only a plain PDF: its page tree is the page order

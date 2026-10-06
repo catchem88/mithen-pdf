@@ -1042,7 +1042,6 @@ void UpdateControlsColors(MainWindow* win) {
         if (win->tocFilterEdit) {
             win->tocFilterEdit->SetColors(txtCol, bgCol);
         }
-        UpdateSidebarColors(win);
     }
 
     HomePageUpdateSearchColors(win);

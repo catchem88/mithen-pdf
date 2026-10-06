@@ -44,7 +44,6 @@
 #include "Annotation.h"
 #include "FormFields.h"
 #include "PdfTools.h"
-#include "MergePdf.h"
 #include "ChmModel.h"
 #include "MarkdownModel.h"
 #include "MarkdownToc.h"
@@ -806,12 +805,6 @@ Str HwndPasswordUI::GetPassword(Str path, u8* fileDigest, u8 decryptionKeyOut[32
     bool canRememberPwd = SettingsRememberOpenedFiles() && gSettings->rememberStatePerDocument;
     bool* rememberPwd = canRememberPwd ? saveKey : nullptr;
     return ShowGetPasswordDialog(hwnd, path, rememberPwd, &gShowPassword);
-}
-
-// a PDF a dialog reads pages from (Merge PDF); asks for its password like opening it in a tab
-EngineBase* CreatePdfEngineForDialog(Str path, HWND hwnd) {
-    HwndPasswordUI pwdUI(hwnd);
-    return CreateEngineMupdfFromFile(path, FileType::PDF, DpiGet(), &pwdUI);
 }
 
 // True while a tab is mid-load (async open). Used so we don't treat a plain
@@ -2397,8 +2390,7 @@ static bool ShouldUsePageAspectForView(Str path) {
         return false;
     }
     FileType ft = GuessFileTypeFromName(path, true);
-    return ft == FileType::PDF || ft == FileType::Xps || ft == FileType::DjVu || ft == FileType::PS ||
-           ft == FileType::Dvi;
+    return ft == FileType::PDF || ft == FileType::Xps || ft == FileType::DjVu || ft == FileType::PS;
 }
 
 static void ApplyPageAspectView(EngineBase* engine, DisplayMode* modeOut, float* zoomOut) {
@@ -6220,13 +6212,9 @@ static bool AppendFileFilterForDoc(DocController* ctrl, str::Builder& fileFilter
         fileFilter.Append(fmt(Tr("Image files (*.%s)").s, imgDefExt));
     } else if (type == kindEngineImageDir) {
         return false; // only show "All files"
-    } else if (type == kindEnginePostScript || type == kindEngineDvi) {
-        // also offer the PDF the converter produced (SaveFileAs writes it)
-        if (type == kindEngineDvi) {
-            fileFilter.Append(Tr("DVI documents"));
-        } else {
-            fileFilter.Append(Tr("PostScript documents"));
-        }
+    } else if (type == kindEnginePostScript) {
+        // also offer the PDF Ghostscript produced (EnginePs::SaveFileAs writes it)
+        fileFilter.Append(Tr("PostScript documents"));
         fileFilter.Append(fmt("\1*%s\1", ctrl->GetDefaultFileExt()));
         fileFilter.Append(Tr("PDF documents"));
         fileFilter.Append(StrL("\1*.pdf\1"));
@@ -6381,12 +6369,11 @@ static bool SaveDocAs(MainWindow* win, Str dstPath) {
     EngineBase* engine = dm ? dm->GetEngine() : nullptr;
 
     TempStr realDstFileName = str::DupTemp(dstPath);
-    bool convertedAsPdf = engine && str::EndsWithI(realDstFileName, StrL(".pdf")) &&
-                          (engine->kind == kindEnginePostScript || engine->kind == kindEngineDvi);
+    bool psAsPdf = engine && engine->kind == kindEnginePostScript && str::EndsWithI(realDstFileName, StrL(".pdf"));
 
     // Make sure that the file has a valid extension
     Str defExt = ctrl->GetDefaultFileExt();
-    if (!convertedAsPdf && !str::EndsWithI(realDstFileName, defExt)) {
+    if (!psAsPdf && !str::EndsWithI(realDstFileName, defExt)) {
         realDstFileName = str::JoinTemp(realDstFileName, defExt);
     }
 
@@ -6396,7 +6383,7 @@ static bool SaveDocAs(MainWindow* win, Str dstPath) {
     // Replace with EngineGetDocumentData() and save that if not empty
     bool ok = true;
     TempStr errorMsg;
-    if (convertedAsPdf || (!file::Exists(srcFileName) && engine)) {
+    if (psAsPdf || (!file::Exists(srcFileName) && engine)) {
         // Recreate nonexistent files from memory...
         logf("calling engine->SaveFileAs(%s)\n", realDstFileName);
         ok = engine->SaveFileAs(realDstFileName);
@@ -6902,7 +6889,6 @@ static void BuildOpenFileFilters(OpenFileFilterList& out) {
         {Tr("XPS documents"), StrL("*.xps;*.oxps"), true},
         {Tr("DjVu documents"), StrL("*.djvu"), true},
         {Tr("PostScript documents"), StrL("*.ps;*.eps"), IsEnginePsAvailable()},
-        {Tr("DVI documents"), StrL("*.dvi"), IsEngineDviAvailable()},
         {Tr("Comic books"), StrL("*.cbz;*.cbr;*.cb7;*.cbt"), true},
         {Tr("CHM documents"), StrL("*.chm"), true},
         {Tr("SVG documents"), StrL("*.svg"), true},
@@ -12436,10 +12422,6 @@ static LRESULT FrameOnCommand(MainWindow* win, HWND hwnd, UINT msg, WPARAM wp, L
             ShowPdfDeletePageDialog(win);
             break;
 
-        case CmdMergePDF:
-            ShowMergePdfDialog(win);
-            break;
-
         case CmdPdfExtractPages:
             ShowPdfExtractPagesDialog(win);
             break;
@@ -16562,7 +16544,6 @@ static void DeleteStaleOpenCacheFiles() {
 
 static void DeleteStaleFilesAsync() {
     DeleteStaleCbxCacheFiles();
-    DeleteStaleDviCache();
     DeleteStaleOpenCacheFiles();
     DeleteOldPdfPreviewLogs(32);
 
@@ -16629,7 +16610,7 @@ static void DeleteStaleFilesAsync() {
     di.includeDirs = true;
     for (DirIterEntry* de : di) {
         Str name = de->name;
-        if (str::Eq(name, StrL("cbx-cache")) || str::Eq(name, StrL("dvi-cache"))) {
+        if (str::Eq(name, StrL("cbx-cache"))) {
             continue;
         }
 
@@ -18287,4 +18268,9 @@ Exit:
     FreeLibsumatrapdfDll();
 
     return exitCode;
+}
+
+EngineBase* CreatePdfEngineForDialog(Str path, HWND hwnd) {
+    HwndPasswordUI pwdUI(hwnd);
+    return CreateEngineMupdfFromFile(path, FileType::PDF, DpiGet(), &pwdUI);
 }

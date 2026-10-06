@@ -12,7 +12,6 @@ struct ReadAloudPlaybackBar;
 struct ReadingAutoScrollBar;
 struct VirtText;
 struct VirtCloseButton;
-struct PageThumbnailsCtrl;
 struct VirtRoot;
 struct VirtSplitter;
 struct HBox;
@@ -274,14 +273,9 @@ struct MainWindow { // NOLINT(clang-analyzer-optin.performance.Padding)
     VirtRoot* tocRoot = nullptr;
     Edit* tocFilterEdit = nullptr;
     TreeView* tocTreeView = nullptr;
-    // "Thumbnails" in the header, next to tocLabel ("Bookmarks"); a click on either
-    // switches the view
-    VirtText* tocThumbnailsLabel = nullptr;
-    // the Thumbnails view: the document's page thumbnails
-    PageThumbnailsCtrl* pageThumbs = nullptr;
     TocTree* tocFilteredTree = nullptr;
-    // VBox(header, filter edit, tree, thumbnails); owns those controls and lays
-    // them out in hwndTocBox
+    // VBox(label, filter edit, tree); owns those three controls and lays them
+    // out in hwndTocBox
     ILayout* tocLayout = nullptr;
     // page-thumbnails view of the same sidebar (CmdNavigateThumbnail): shown
     // instead of the bookmarks tree, never both at once

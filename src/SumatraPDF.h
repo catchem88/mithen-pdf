@@ -348,7 +348,9 @@ void DismissNextFileScrollHint(MainWindow* win);
 void MainWindowRerender(MainWindow* win, bool includeNonClientArea = false);
 void RerenderTabPage(WindowTab*, int pageNo);
 void GetFrameNcStrips(MainWindow*, Vec<Rect>& out);
-EngineBase* CreatePdfEngineForDialog(Str path, HWND hwnd);
+bool CanEditPagesInTab(WindowTab*);
+bool MovePagesInTab(WindowTab*, const Vec<int>& pages, int beforePage);
+int InsertPdfInTab(WindowTab*, Str path, int beforePage);
 
 TempStr PageInfoOverlayResultTemp(Str pathTwoPages, Str pathOnePage, int* exitCodeOut = nullptr);
 TempStr WindowStateDuringLoadResultTemp(int* exitCodeOut = nullptr);
@@ -359,3 +361,5 @@ void ShowFileInFolder(MainWindow* win, Str path);
 void SmartZoom(MainWindow* win, float factor, Point* pt, bool smartZoom);
 TempStr GetSumatraDataDirTemp();
 TempStr GetSumatraBuildSpecificDirTemp();
+
+EngineBase* CreatePdfEngineForDialog(Str path, HWND hwnd);
