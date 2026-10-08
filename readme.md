@@ -22,6 +22,9 @@ MithenPDF is a lightweight multi-format (PDF, EPUB, MOBI, CBZ, CBR, FB2, CHM, XP
 * Not registered as a handler for images, archives, `.md`, `.txt`, or PostScript; file navigation skips those extensions. They can still be opened when asked explicitly.
 * Uninstalls cleanly, no leftovers.
 
+## Screenshot
+![screenshot](img/screenshot.png)
+
 ## Supported platforms
 * Windows 7, 8, 8.1, 10, 11 (x64). Some formats (CHM) need the Microsoft Edge WebView2 Runtime, which ships with Windows 11 and recent Windows 10.
 
