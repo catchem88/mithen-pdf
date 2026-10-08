@@ -11,6 +11,7 @@ MithenPDF is a lightweight multi-format (PDF, EPUB, MOBI, CBZ, CBR, FB2, CHM, XP
 ## Additional features in this fork
 * Follows the Windows Explorer sorting wherever files are listed: `Next File` / `Previous File` (`Ctrl + Shift + Right` / `Ctrl + Shift + Left`), the `Navigate Files in Folder` dialog, and the tab order when several files are opened from Explorer. Whatever column and direction is set there (Name, Date modified, Date created, Type, Size) is used.
 * PDF forms: date fields open a month-calendar picker, and signature fields open a draw box for a freehand or image signature.
+* OCR (Ctrl+O or Right click > OCR) - Using native OcrEngine Class (Windows.Media.Ocr - WinRT Build 10240)
 * Simplified menu bar: `File` / `View` / `Read Aloud` / `Settings` / `Help`, with Help limited to `About` and the GitHub page.
 * Streamlined default hotkeys:
   * `Esc` exits, `Alt + Enter` / `Ctrl + F` / `F11` toggle fullscreen
